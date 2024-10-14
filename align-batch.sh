@@ -8,7 +8,6 @@
 REF_FILE="ncbi_dataset/ncbi_dataset/data/GCA_000240185.2/GCA_000240185.2_ASM24018v2_genomic.fna"
 
 # Define the base directory and the filename pattern
-#REF_FILE="GCA_000240185.2_ASM24018v2_genomic.fna"
 BASE_DIR="./number4"
 #BASE_DIR="./tmp"
 PATTERN="*.fna" 
@@ -62,7 +61,7 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
     mummerplot --png --layout --filter alignment.delta
     # automated script production fails; use manual gnuplot call instead
     gnuplot "out.gp"
-    cp "out.png" > "$img_file"
+    cp "out.png" "$img_file"
 
     echo "Output written to $output_file"
 done
