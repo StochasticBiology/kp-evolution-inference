@@ -10,9 +10,10 @@ REF_FILE="ncbi_dataset/ncbi_dataset/data/GCA_000240185.2/GCA_000240185.2_ASM2401
 # Define the base directory and the filename pattern
 BASE_DIR="./number4"
 #BASE_DIR="./tmp"
+OUT_DIR="${BASE_DIR}/outputs" 
 PATTERN="*.fna" 
 
-mkdir ragtag_out
+mkdir "$OUT_DIR"
 
 # Loop through all files matching the pattern in the base directory and its subdirectories
 find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
@@ -50,9 +51,9 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
             new_filename="${filename}-${ragtagfilename}"
 
             # Rename the file
-            mv "$ragtagfile" "ragtag_out/$new_filename"
+            mv "$ragtagfile" "${OUT_DIR}/$new_filename"
 
-            echo "Renamed $ragtagfile to ragtag_out/$new_filename"
+            echo "Renamed $ragtagfile to ${OUT_DIR}/$new_filename"
 	fi
     done
 
@@ -61,7 +62,7 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
     mummerplot --png --layout --filter alignment.delta
     # automated script production fails; use manual gnuplot call instead
     gnuplot "out.gp"
-    cp "out.png" "$img_file"
+    cp "out.png" "${OUT_DIR}/${img_file}"
 
     echo "Output written to $output_file"
 done
