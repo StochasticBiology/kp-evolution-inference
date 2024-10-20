@@ -36,7 +36,7 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
     #samtools flagstat "$bam_output_sorted_file"
 
     # scaffold with RagTag
-    ragtag.py scaffold "$file" "$REF_FILE"
+    ragtag.py scaffold "$REF_FILE" "$file" 
 
     # just label RagTag output and pull into a consistent place
     # Loop through all files in the subdirectory
