@@ -7,7 +7,8 @@
 # https://chatgpt.com/share/6706a40b-4580-8005-878a-27906b0c83c3
 # although the alignment is totally done with RagTag or NumCmer (and the latter visualised)
 
-REF_FILE="ncbi_dataset/ncbi_dataset/data/GCA_000240185.2/GCA_000240185.2_ASM24018v2_genomic.fna"
+#REF_FILE="ncbi_dataset/ncbi_dataset/data/GCA_000240185.2/GCA_000240185.2_ASM24018v2_genomic.fna"
+REF_FILE="GCA_000240185.2_ASM24018v2_genomic.fna"
 
 # Define the base directory and the filename pattern
 if [ "$1" == "1" ]; then
@@ -33,6 +34,7 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
     bam_output_file="${filename}_aligned.bam"
     bam_output_sorted_file="${filename}_aligned_sorted.bam"
     img_file="${filename}_alignment.png"
+    report_file="${filename}.report"
 
     # Perform your desired operation on the file (e.g., process it)
     echo "Processing $file..."
@@ -69,9 +71,14 @@ find "$BASE_DIR" -type f -name "$PATTERN" | while read -r file; do
     nucmer --prefix=alignment "$REF_FILE" "$file"
     mummerplot --png --layout --filter alignment.delta
     # automated script production fails; use manual gnuplot call instead
-    gnuplot "out.gp"
-    cp "out.png" "${OUT_DIR}/${img_file}"
+    #gnuplot "out.gp"
+    #cp "out.png" "${OUT_DIR}/${img_file}"
 
+    # get report of alignment with respect to reference sequence
+    echo "Running dnadiff"
+    dnadiff "$REF_FILE" "$file"
+    cp "out.report" "${OUT_DIR}/${report_file}"
+    
     echo "Output written to $output_file"
 done
 
