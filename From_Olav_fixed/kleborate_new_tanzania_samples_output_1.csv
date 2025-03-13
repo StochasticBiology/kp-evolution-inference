@@ -1,0 +1,10 @@
+"","id","AGly_acquired","Col_acquired","Fcyn_acquired","Flq_acquired","Gly_acquired","MLS_acquired","Phe_acquired","Rif_acquired","Sul_acquired","Tet_acquired","Tgc_acquired","Tmt_acquired","Bla_acquired","Bla_inhR_acquired","Bla_ESBL_acquired","Bla_ESBL_inhR_acquired","Bla_Carb_acquired","Bla_chr","SHV_mutations","Omp_mutations","Col_mutations","Flq_mutations"
+"1","245795_BSIZNM2642.fna-ragtag.scaffold",1,0,0,0,0,1,0,0,1,1,0,1,1,0,0,0,0,1,0,0,0,0
+"2","245801_BSIZNN170.fna-ragtag.scaffold",1,0,0,1,0,0,0,0,1,1,0,1,1,0,1,0,0,1,1,0,0,0
+"3","245809_BSIZN3441.fna-ragtag.scaffold",0,0,0,0,0,0,0,0,1,1,0,1,0,0,0,0,0,1,0,0,0,0
+"4","245810_BSIZNL121.fna-ragtag.scaffold",1,0,0,0,0,0,0,0,1,0,0,1,1,0,1,0,0,1,1,0,0,0
+"5","245814_BSIZNN183.fna-ragtag.scaffold",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0
+"6","245816_BSIZN441.fna-ragtag.scaffold",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0
+"7","245817_BSIZN4511.fna-ragtag.scaffold",1,0,0,1,0,0,0,0,1,1,0,1,1,0,1,0,0,1,1,1,0,1
+"8","245819_BSIZN457.fna-ragtag.scaffold",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0
+"9","255484_BSIZN462.fna-ragtag.scaffold",1,0,0,0,0,0,0,0,1,0,0,1,1,0,1,0,0,1,1,0,0,0
