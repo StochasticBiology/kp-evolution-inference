@@ -20,6 +20,9 @@ for(i in 1:nrow(df)) {
 
 # get a tree by clustering
 treeUPGMA = upgma(am)
-plot(treeUPGMA)
+treeNJ = NJ(am)
 
-write.tree(treeUPGMA, "1-tree.phy")
+plot(treeUPGMA)
+plot(treeNJ)
+
+write.tree(treeNJ, "1-tree.phy")
