@@ -1,0 +1,1 @@
+ls *report | awk 'BEGIN{FS=".";}{print $1;}' | sed 's/-/ /g' | awk '{printf("grep \"AvgIdentity\" %s-%s.report | awk -v v1=\"%s\" -v v2=\"%s\" XXXBEGIN{n=0;}{if(n==0) {print v1, v2, $3;} n++;}XXX >> summary-all.txt\n", $1, $2, $1, $2);}' | sed "s/XXX/\'/g" > make-summary.sh
