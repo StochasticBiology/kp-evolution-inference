@@ -1,8 +1,10 @@
 library(phangorn)
 library(ape)
 source("hypertraps.R")
+library(ggtree)
+options(ignore.negative.edge=TRUE)
 
-# read summary ANI scores
+# read summary ANI scores from all-all comparison (old and new)
 df = read.csv("summary-all.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
 
@@ -22,32 +24,27 @@ for(i in 1:nrow(df)) {
 
 # get a tree by clustering
 treeNJ = upgma(am)
-treeNJ = NJ(am)
+#treeNJ = NJ(am)
 
-plot(treeUPGMA)
 plot(treeNJ)
 
 write.tree(treeNJ, "tree-all.phy")
-grepl("SAMN", treeNJ$tip.label)
-#V(treeNJ)$new = grepl("SAMN", treeNJ$tip.label)
+
+# label old and new differently
 tip.cols = ifelse(grepl("SAMN", treeNJ$tip.label), "red", "blue")
 
-library(ggtree)
-options(ignore.negative.edge=TRUE)
 ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
-ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
+#ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
 
-require(ape)
-tr <- rtree(10)
-ggtree(tr) + geom_tiplab()
-
+# pull the feature sets from the new dataset
 tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
-new.set = curate.tree(treeNJ, f.df)
+new.set = curate.tree(treeNJ, f.df). # XXX why doesn't this throw an error -- as we don't have the old features yet?
 
 # get the old tree based on LIN codes
 old.tree = read.tree("From_Olav_fixed/Tanzania.nwk")
+# and the old dataset of features
 old.refs = read.csv("From_Olav_fixed/tanzania-resistance-profiles.csv")
 for(i in 1:length(old.tree$tip.label)) {
   r = which(old.refs$id == old.tree$tip.label[i])
@@ -56,7 +53,22 @@ for(i in 1:length(old.tree$tip.label)) {
 plot(old.tree)
 ggtree(old.tree) + geom_tiplab2() + layout_circular()
 
-# some comparisons
+# combine the old and new feature sets
+f2.df = old.refs[,3:ncol(old.refs)]
+colnames(f2.df)[1] = "id"
+
+fboth.df = rbind(f.df, f2.df)
+
+# now curate the all tree with the all dataset
+all.ct = curate.tree(treeNJ, fboth.df)
+plotHypercube.curated.tree(all.ct)
+
+all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
+  2*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
+
+plotHypercube.curated.tree(all.ct, hjust=1) +  scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
+
+# some comparisons of ANI to LIN code trees
 mean(am)
 # very highly related by LIN
 am["SAMN10390519","SAMN10390521"]
@@ -71,8 +83,8 @@ am["SAMN10390519","SAMN10390542"]
 am["SAMN10390499","SAMN10390526"]
 am["SAMN10390509","SAMN10390515"]
 
-library(ape)
 
+############# pull set of subtrees that have no SAMN (old) ancestry
 # Load your tree (replace "your_tree.nwk" with your actual file)
 tree <- treeNJ
 
@@ -105,6 +117,7 @@ length(subtrees)
 # (Optional) Plot one of the subtrees
 plot(subtrees[[12]], main = "Example Subtree")
 
+# get the set of transitions we acquire from curating these individual subtrees
 for(i in 1:length(subtrees)) {
   tmp.ct = curate.tree(subtrees[[i]], f.df) 
   if(i == 1) {
@@ -116,14 +129,20 @@ for(i in 1:length(subtrees)) {
     }
 }
 
-new.fit = HyperTraPS(all.dests, initialstates = all.srcs, 
-                     length = 5, kernel = 3,
-                     seed = 1)
+#new.fit = HyperTraPS(all.dests, initialstates = all.srcs, 
+#                     length = 5, kernel = 3,
+#                     seed = 1)
 
+# summarise the changes we see in this new-independent-of-old datasets
+new.changes = which(all.srcs != all.dests, arr.ind = TRUE)
+sub.srcs = all.srcs[unique(new.changes[,1]),]
+sub.dests = all.dests[unique(new.changes[,1]),]
+sets = sub.dests
+sets[sub.srcs == 0 & sub.dests == 1] = 2
 plotHypercube.curated.tree(new.set, hjust = 1, font.size=2) +  scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
-new.fit = HyperTraPS(new.set$dests, initialstates = new.set$srcs, 
-           length = 5, kernel = 3,
-           seed = 1)
-new.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
-plotHypercube.sampledgraph2(new.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
+#new.fit = HyperTraPS(new.set$dests, initialstates = new.set$srcs, 
+#           length = 5, kernel = 3,
+#           seed = 1)
+#new.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
+#plotHypercube.sampledgraph2(new.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
 
