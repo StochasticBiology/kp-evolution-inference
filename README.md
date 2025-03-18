@@ -1,6 +1,6 @@
 # kp-assembly
 
-Needs RagTag https://github.com/malonge/RagTag and Mummer `brew install mummer` (and Gnuplot)
+Needs RagTag https://github.com/malonge/RagTag and Mummer `brew install mummer` (and Gnuplot). Also needs HyperTraPS-CT.
 
 Currently in Dropbox/Sabrina
 
