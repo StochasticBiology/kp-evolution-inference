@@ -1,8 +1,10 @@
 library(phangorn)
 source("hypertraps.R")
 
+experiment = "4"
+
 # read summary ANI scores
-df = read.csv("1-summary.txt", skip=1, sep=" ", header=FALSE)
+df = read.csv(paste0(experiment, "-summary.txt", collapse=""), skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
 
 # phrase as distances and initialise a distance matrix
@@ -26,9 +28,11 @@ treeNJ = NJ(am)
 plot(treeUPGMA)
 plot(treeNJ)
 
-write.tree(treeNJ, "1-tree.phy")
+write.tree(treeNJ, paste0(experiment, "-tree.phy", collapse=""))
 
-tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv")
+if(experiment == "1") {
+  tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv") 
+}
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
 new.set = curate.tree(treeNJ, f.df)
