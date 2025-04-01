@@ -32,6 +32,8 @@ write.tree(treeNJ, paste0(experiment, "-tree.phy", collapse=""))
 
 if(experiment == "1") {
   tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv") 
+} else {
+  tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_1.csv") 
 }
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
