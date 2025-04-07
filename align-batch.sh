@@ -17,7 +17,11 @@ if [ "$1" == "1" ]; then
 fi
 if [ "$1" == "4" ]; then
   BASE_DIR="./number4"
-  PATTERN="*.fna"
+  PATTERN="*.fasta"
+fi
+if [ "$1" == "138" ]; then
+  BASE_DIR="./number138"
+  PATTERN="*.fasta"
 fi
 
 # allocate and create output directory
