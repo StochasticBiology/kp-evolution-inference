@@ -5,7 +5,7 @@ library(ggtree)
 options(ignore.negative.edge=TRUE)
 
 # read summary ANI scores from all-all comparison (old and new)
-df = read.csv("summary-all.txt", skip=1, sep=" ", header=FALSE)
+df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
 
 # phrase as distances and initialise a distance matrix
@@ -31,21 +31,25 @@ plot(treeNJ)
 write.tree(treeNJ, "tree-all.phy")
 
 # label old and new differently
-tip.cols = ifelse(grepl("SAMN", treeNJ$tip.label), "red", "blue")
+tip.cols = rep("blue", length(treeNJ$tip.label))
+tip.cols[grep("SAMN", treeNJ$tip.label)] = "red"
+tip.cols[grep("2457", treeNJ$tip.label)] = "green"
 
 ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
-#ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
+ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
 
 # pull the feature sets from the new dataset
-tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv")
+tmpdf = read.csv("../From_Olav_fixed/dichotomized_1_3_8.csv")
+tmpdf = cbind(tmpdf$strain, tmpdf)
+colnames(tmpdf)[c(1,2)] = c("X", "id")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
 new.set = curate.tree(treeNJ, f.df) # XXX why doesn't this throw an error -- as we don't have the old features yet?
 
 # get the old tree based on LIN codes
-old.tree = read.tree("From_Olav_fixed/Tanzania.nwk")
+old.tree = read.tree("../From_Olav_fixed/Tanzania.nwk")
 # and the old dataset of features
-old.refs = read.csv("From_Olav_fixed/tanzania-resistance-profiles.csv")
+old.refs = read.csv("../From_Olav_fixed/tanzania-resistance-profiles.csv")
 for(i in 1:length(old.tree$tip.label)) {
   r = which(old.refs$id == old.tree$tip.label[i])
   old.tree$tip.label[i] = old.refs$displayname[r]
@@ -64,7 +68,6 @@ old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs,
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
 
-
 # combine the old and new feature sets
 f2.df = old.refs[,3:ncol(old.refs)]
 colnames(f2.df)[1] = "id"
@@ -76,7 +79,10 @@ all.ct = curate.tree(treeNJ, fboth.df)
 plotHypercube.curated.tree(all.ct)
 
 all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
-  2*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
+  3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
+
+all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] = 
+  2*all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)]
 
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
