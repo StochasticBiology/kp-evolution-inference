@@ -14,4 +14,5 @@ Now looking at "number138" -- experiments 1, 3, 8 combined.
 Here we have (in set1/)
 
 * `process-pairs.sh` does the first part of `compile-hits-1.sh` then mirrors `compile-pairs.sh`, identifying all "138" Kp isolates then buidling a script to do all-by-all `dnadiff` comparisons
+* `process-reports.sh` pulls ANI values from all the resulting reports
 * `run.sh` illustrating the pipeline
