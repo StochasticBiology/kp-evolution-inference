@@ -87,6 +87,7 @@ all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] =
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
+all.data.plot
 ### need to look into this Rif_acquired behaviour
 
 # some comparisons of ANI to LIN code trees
@@ -121,6 +122,8 @@ for(i in 1:nrow(all.ct$transitions)) {
     safe.trans = c(safe.trans, i)
   }
 }
+
+# XXX NEXT DO PREDICTIONS FOR DIFFERENT TIMES OF DATA
 
 # construct predictions from (differently trained!) inference, and test with respect to new independent transitions
 freqs = colSums(old.refs[,4:ncol(old.refs)])/nrow(old.refs)
@@ -163,9 +166,10 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=rank
   labs(x = "Predicted rank of true next steps", y = "Probability", fill="Model") + 
   scale_color_discrete(guide="none") +
   theme_minimal()
+predict.plot
 
 sf = 3
-png("predictions.png", width=800*sf, height=400*sf, res=72*sf)
+png("predictions-138.png", width=800*sf, height=400*sf, res=72*sf)
 ggarrange(all.data.plot, predict.plot, labels=c("A", "B"))
 dev.off()
 
