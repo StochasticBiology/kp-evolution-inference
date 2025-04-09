@@ -35,7 +35,11 @@ tip.cols = rep("blue", length(treeNJ$tip.label))
 tip.cols[grep("SAMN", treeNJ$tip.label)] = "red"
 tip.cols[grep("2457", treeNJ$tip.label)] = "green"
 
-ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
+vert.tree = ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
+png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
+print(vert.tree)
+dev.off()
+
 ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
 
 # pull the feature sets from the new dataset
