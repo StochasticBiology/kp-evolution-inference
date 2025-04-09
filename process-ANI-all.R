@@ -7,6 +7,33 @@ options(ignore.negative.edge=TRUE)
 # read summary ANI scores from all-all comparison (old and new)
 df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
+df.mis = read.csv("138-bases.txt", skip=1, sep=" ", header=FALSE)
+colnames(df.mis) = c("isolate.1", "isolate.2", "bases")
+
+df.mis = cbind(df.mis, data.frame(ani=df$ani))
+df.mis$class = 0
+df.mis$class[grep("SAMN", df.mis$isolate.1)] = 1+df.mis$class[grep("SAMN", df.mis$isolate.1)] 
+df.mis$class[grep("SAMN", df.mis$isolate.2)] = 1+df.mis$class[grep("SAMN", df.mis$isolate.2)] 
+df.mis$class[grep("2457", df.mis$isolate.1)] = 10+df.mis$class[grep("2457", df.mis$isolate.1)] 
+df.mis$class[grep("2457", df.mis$isolate.2)] = 10+df.mis$class[grep("2457", df.mis$isolate.2)] 
+
+df.mis$class[df.mis$class == 0] = "New-new"
+df.mis$class[df.mis$class == 1] = "Kleb-new"
+df.mis$class[df.mis$class == 2] = "Kleb-Kleb"
+df.mis$class[df.mis$class == 10] = "New-old"
+df.mis$class[df.mis$class == 11] = "Kleb-old"
+df.mis$class[df.mis$class == 20] = "Old-old"
+
+ggplot(df.mis, aes(x=bases, y=ani, color=factor(class))) + 
+  geom_point(size=1) + theme_minimal() +
+  labs(x = "% bases unaligned", y = "ANI among aligned bases")
+
+big.base = unique(df.mis$isolate.1[df.mis$bases>25])
+unique(df.mis$isolate.1[df.mis$ani<95])
+
+ggplot(df.mis[!(df.mis$isolate.1 %in% big.base),], aes(x=bases, y=ani, color=factor(class))) + 
+  geom_point(size=1) + theme_minimal() +
+  labs(x = "% bases unaligned", y = "ANI among aligned bases")
 
 # phrase as distances and initialise a distance matrix
 df$distance = 1 - df$ani/100
