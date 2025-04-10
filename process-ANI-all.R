@@ -4,6 +4,8 @@ source("hypertraps.R")
 library(ggtree)
 options(ignore.negative.edge=TRUE)
 
+sf = 2
+
 # read summary ANI scores from all-all comparison (old and new)
 df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
@@ -24,16 +26,22 @@ df.mis$class[df.mis$class == 10] = "New-old"
 df.mis$class[df.mis$class == 11] = "Kleb-old"
 df.mis$class[df.mis$class == 20] = "Old-old"
 
-ggplot(df.mis, aes(x=bases, y=ani, color=factor(class))) + 
+diag.1 = ggplot(df.mis, aes(x=bases, y=ani, color=factor(class))) + 
   geom_point(size=1) + theme_minimal() +
   labs(x = "% bases unaligned", y = "ANI among aligned bases")
+diag.1
 
 big.base = unique(df.mis$isolate.1[df.mis$bases>25])
 unique(df.mis$isolate.1[df.mis$ani<95])
 
-ggplot(df.mis[!(df.mis$isolate.1 %in% big.base),], aes(x=bases, y=ani, color=factor(class))) + 
+diag.2 = ggplot(df.mis[!(df.mis$isolate.1 %in% big.base),], aes(x=bases, y=ani, color=factor(class))) + 
   geom_point(size=1) + theme_minimal() +
   labs(x = "% bases unaligned", y = "ANI among aligned bases")
+diag.2
+
+png("diagnosis-plot.png", width=600*sf, height=600*sf, res=72*sf)
+ggarrange(diag.1, diag.2)
+dev.off()
 
 # phrase as distances and initialise a distance matrix
 df$distance = 1 - df$ani/100
