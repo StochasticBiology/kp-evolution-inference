@@ -4,44 +4,9 @@ source("hypertraps.R")
 library(ggtree)
 options(ignore.negative.edge=TRUE)
 
-sf = 2
-
 # read summary ANI scores from all-all comparison (old and new)
-df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
+df = read.csv("summary-all.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
-df.mis = read.csv("138-bases.txt", skip=1, sep=" ", header=FALSE)
-colnames(df.mis) = c("isolate.1", "isolate.2", "bases")
-
-df.mis = cbind(df.mis, data.frame(ani=df$ani))
-df.mis$class = 0
-df.mis$class[grep("SAMN", df.mis$isolate.1)] = 1+df.mis$class[grep("SAMN", df.mis$isolate.1)] 
-df.mis$class[grep("SAMN", df.mis$isolate.2)] = 1+df.mis$class[grep("SAMN", df.mis$isolate.2)] 
-df.mis$class[grep("2457", df.mis$isolate.1)] = 10+df.mis$class[grep("2457", df.mis$isolate.1)] 
-df.mis$class[grep("2457", df.mis$isolate.2)] = 10+df.mis$class[grep("2457", df.mis$isolate.2)] 
-
-df.mis$class[df.mis$class == 0] = "New-new"
-df.mis$class[df.mis$class == 1] = "Kleb-new"
-df.mis$class[df.mis$class == 2] = "Kleb-Kleb"
-df.mis$class[df.mis$class == 10] = "New-old"
-df.mis$class[df.mis$class == 11] = "Kleb-old"
-df.mis$class[df.mis$class == 20] = "Old-old"
-
-diag.1 = ggplot(df.mis, aes(x=bases, y=ani, color=factor(class))) + 
-  geom_point(size=1) + theme_minimal() +
-  labs(x = "% bases unaligned", y = "ANI among aligned bases")
-diag.1
-
-big.base = unique(df.mis$isolate.1[df.mis$bases>25])
-unique(df.mis$isolate.1[df.mis$ani<95])
-
-diag.2 = ggplot(df.mis[!(df.mis$isolate.1 %in% big.base),], aes(x=bases, y=ani, color=factor(class))) + 
-  geom_point(size=1) + theme_minimal() +
-  labs(x = "% bases unaligned", y = "ANI among aligned bases")
-diag.2
-
-png("diagnosis-plot.png", width=600*sf, height=600*sf, res=72*sf)
-ggarrange(diag.1, diag.2)
-dev.off()
 
 # phrase as distances and initialise a distance matrix
 df$distance = 1 - df$ani/100
@@ -66,29 +31,21 @@ plot(treeNJ)
 write.tree(treeNJ, "tree-all.phy")
 
 # label old and new differently
-tip.cols = rep("blue", length(treeNJ$tip.label))
-tip.cols[grep("SAMN", treeNJ$tip.label)] = "red"
-tip.cols[grep("2457", treeNJ$tip.label)] = "green"
+tip.cols = ifelse(grepl("SAMN", treeNJ$tip.label), "red", "blue")
 
-vert.tree = ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
-png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
-print(vert.tree)
-dev.off()
-
-ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
+ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
+#ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
 
 # pull the feature sets from the new dataset
-tmpdf = read.csv("../From_Olav_fixed/dichotomized_1_3_8.csv")
-tmpdf = cbind(tmpdf$strain, tmpdf)
-colnames(tmpdf)[c(1,2)] = c("X", "id")
+tmpdf = read.csv("From_Olav_fixed/kleborate_new_tanzania_samples_output_2.csv")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
 new.set = curate.tree(treeNJ, f.df) # XXX why doesn't this throw an error -- as we don't have the old features yet?
 
 # get the old tree based on LIN codes
-old.tree = read.tree("../From_Olav_fixed/Tanzania.nwk")
+old.tree = read.tree("From_Olav_fixed/Tanzania.nwk")
 # and the old dataset of features
-old.refs = read.csv("../From_Olav_fixed/tanzania-resistance-profiles.csv")
+old.refs = read.csv("From_Olav_fixed/tanzania-resistance-profiles.csv")
 for(i in 1:length(old.tree$tip.label)) {
   r = which(old.refs$id == old.tree$tip.label[i])
   old.tree$tip.label[i] = old.refs$displayname[r]
@@ -100,12 +57,20 @@ ggtree(old.tree) + geom_tiplab2() + layout_circular()
 old.ct = curate.tree(old.tree, old.refs[,3:ncol(old.refs)])
 plotHypercube.curated.tree(old.ct)
 
+plot.old = plotHypercube.curated.tree(old.ct)
+
 # do the inference (should match Olav's output)
 old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
                      length = 5, kernel = 3, walkers = 400,
-                     seed = 1)
+                     seed = 1, featurenames= colnames(f.df)[2:ncol(f.df)])
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
-plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
+plot.old.graph = plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, 
+                            no.times = TRUE, thresh=0.025, truncate = 6)
+
+plot.old.bubbles = plotHypercube.bubbles(old.fit) #+ scale_y_discrete(labels = colnames(f.df)[2:ncol(f.df)])
+ggarrange(plot.old,
+          ggarrange(plot.old.bubbles, plot.old.graph, nrow=2, labels=c("B", "C")),
+          nrow=1, labels = c("A", ""))
 
 # combine the old and new feature sets
 f2.df = old.refs[,3:ncol(old.refs)]
@@ -118,15 +83,11 @@ all.ct = curate.tree(treeNJ, fboth.df)
 plotHypercube.curated.tree(all.ct)
 
 all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
-  3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
-
-all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] = 
-  2*all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)]
+  2*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
 
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
-all.data.plot
 ### need to look into this Rif_acquired behaviour
 
 # some comparisons of ANI to LIN code trees
@@ -161,8 +122,6 @@ for(i in 1:nrow(all.ct$transitions)) {
     safe.trans = c(safe.trans, i)
   }
 }
-
-# XXX NEXT DO PREDICTIONS FOR DIFFERENT TIMES OF DATA
 
 # construct predictions from (differently trained!) inference, and test with respect to new independent transitions
 freqs = colSums(old.refs[,4:ncol(old.refs)])/nrow(old.refs)
@@ -205,10 +164,9 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=rank
   labs(x = "Predicted rank of true next steps", y = "Probability", fill="Model") + 
   scale_color_discrete(guide="none") +
   theme_minimal()
-predict.plot
 
 sf = 3
-png("predictions-138.png", width=800*sf, height=400*sf, res=72*sf)
+png("predictions.png", width=800*sf, height=400*sf, res=72*sf)
 ggarrange(all.data.plot, predict.plot, labels=c("A", "B"))
 dev.off()
 
