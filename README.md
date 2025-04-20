@@ -17,3 +17,5 @@ Here we have (in set1/)
 * `process-reports.sh` pulls ANI values from all the resulting reports
 * `process-ANI-all.R` does the tree building, new transition pulling, inference and prediction assays for this
 * `run.sh` illustrating the pipeline
+
+`reversibility-control.R` explores how much of an issue reversible transitions are in the source data
