@@ -1,0 +1,19 @@
+Resistance_Code,Meaning_or_Antibiotic_Class,Relevant_ATC_Codes,ATC_Class_Name
+AGly-a,Aminoglycosides,J01G,Aminoglycoside antibacterials
+Col-a,Colistin / Polymyxins,J01XB,Polymyxins (under J01X: Other antibacterials)
+Fcyn-a,Fosfomycin,J01XX01,Fosfomycin (also under J01X)
+Flq-a,Fluoroquinolones,J01MA,Fluoroquinolones
+Gly-a,Glycopeptides,J01XA,Glycopeptide antibacterials
+MLS-a,Macrolides Lincosamides Streptogramins,J01F,Macrolides lincosamides and streptogramins
+Phe-a,Phenicols,J01BA,Amphenicols
+Rif-a,Rifamycins,J04AB,Rifamycins (Note: J04 = antimycobacterials)
+Sul-a,Sulfonamides,J01E,Sulfonamides and trimethoprim
+Tet-a,Tetracyclines,J01A,Tetracyclines
+Tgc-a,Tigecycline,J01AA12,Tigecycline (under J01A)
+Tmt-a,Trimethoprim,J01EA01,Trimethoprim
+Bla-a,General β-lactam resistance,J01C; J01D,Penicillins (J01C), Cephalosporins (J01D)
+Bla_inhR-a,β-lactam/inhibitor resistant,J01CR,Penicillins + β-lactamase inhibitors
+Bla_ESBL-a,Extended-spectrum β-lactamase resistance,J01DD; J01DE,3rd/4th gen cephalosporins
+Bla_ESBL_inhR-a,ESBL + inhibitor resistance,J01CR; J01DD,ESBLs resisting inhibitor combo drugs
+Bla_Carb-a,Carbapenemase resistance,J01DH,Carbapenems
+Bla_chr,Chromosomal β-lactamase,J01C; J01D,Intrinsic resistance from SHV-1 etc.
