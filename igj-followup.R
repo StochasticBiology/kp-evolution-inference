@@ -107,24 +107,24 @@ for(i in 1:nrow(pca.df)) {
 }
 
 g.pca = ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=country, fill=region)) + 
-  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.5)   + labs(x="PCA1", y="PCA2")
+  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75)   + labs(x="PCA1", y="PCA2")
 
 #g.pca = ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=ccode, fill=region)) + 
 #  geom_point() + geom_text_repel(max.overlaps = 40) 
 
 g.pca.ellipse = g.pca + stat_ellipse(
   geom = "path",
-  linewidth=2,
+  linewidth=1.5,
   alpha = 0.25      # transparency
   #color = NA        # optional: remove ellipse borders
 )  +  theme_minimal()+ theme(legend.position = "bottom")
 
 g.pca2 = ggplot(pca.df, aes(x=pca3, y=pca2, color=region, label=country, fill=region)) + 
-  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.5) + theme_minimal()  + labs(x="PCA3", y="PCA2")
+  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75) + theme_minimal()  + labs(x="PCA3", y="PCA2")
 
 g.pca2.ellipse = g.pca2 + stat_ellipse(
   geom = "path",
-  linewidth=2,
+  linewidth=1.5,
   alpha = 0.25      # transparency
  # color = NA        # optional: remove ellipse borders
 ) + theme(legend.position = "bottom")
@@ -177,6 +177,11 @@ g.pca.part.1 = ggarrange(
   nrow=1
 )
 
+sf = 2
+png("pca-igj.png", width=800*sf, height=600*sf, res=72*sf)
+g.pca.part.1
+dev.off()
+
 g.pca.part.1
 
 ggplot(df[df$country=="Venezuela",], aes(x=Time, y=Name, size=Probability)) + geom_point()
@@ -220,10 +225,43 @@ pca.corrs = ggplot(long.df) +
   geom_vline(xintercept=11) +
   facet_wrap(~name) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
   
+
 long.sub = long.df[long.df$Variable %in% c(16, 18, 20, 3, 5, 6, 7, 9),]
 
 set.1 = c(16, 9, 5, 21, 19)
 set.2 = c(18, 3, 7)
+
+pca.corrs.s1 = ggplot(long.df[!(long.df$Variable %in% c(set.1,set.2)),]) +
+  geom_point(aes(x=Value,y=pca1), size=0.5, color="#BBBBBB") + 
+  geom_smooth(aes(x=Value,y=pca1), method="lm", color="#444444") +
+  geom_point(alpha=0.3, aes(x=Value,y=pca2-10), size=0.5, color="#FF888822") +
+  geom_smooth(alpha=0.3, aes(x=Value,y=pca2-10), method="lm", color="#AA444422") +
+  geom_point(alpha=0.3, aes(x=Value,y=pca3-20), size=0.5, color="#8888FF22") +
+  geom_smooth(aes(x=Value,y=pca3-20), method="lm", color="#6666AA22") +
+  geom_vline(xintercept=11) +
+  facet_wrap(~name, nrow=2) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
+pca.corrs.s2 = ggplot(long.df[(long.df$Variable %in% c(set.1)),]) +
+  geom_point(aes(x=Value,y=pca1), size=0.5, color="#BBBBBB22") + 
+  geom_smooth(aes(x=Value,y=pca1), method="lm", color="#44444422") +
+  geom_point(aes(x=Value,y=pca2-10), size=0.5, color="#FF8888") +
+  geom_smooth(aes(x=Value,y=pca2-10), method="lm", color="#AA4444") +
+  geom_point(aes(x=Value,y=pca3-20), size=0.5, color="#8888FF22") +
+  geom_smooth(aes(x=Value,y=pca3-20), method="lm", color="#6666AA22") +
+  geom_vline(xintercept=11) +
+  facet_wrap(~name, nrow=1) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
+pca.corrs.s3 = ggplot(long.df[(long.df$Variable %in% c(set.2)),]) +
+  geom_point(aes(x=Value,y=pca1), size=0.5, color="#BBBBBB22") + 
+  geom_smooth(aes(x=Value,y=pca1), method="lm", color="#44444422") +
+  geom_point(aes(x=Value,y=pca2-10), size=0.5, color="#FF888822") +
+  geom_smooth(aes(x=Value,y=pca2-10), method="lm", color="#AA444422") +
+  geom_point(aes(x=Value,y=pca3-20), size=0.5, color="#8888FF") +
+  geom_smooth(aes(x=Value,y=pca3-20), method="lm", color="#6666AA") +
+  geom_vline(xintercept=11) +
+  facet_wrap(~name, nrow=1) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
+pca.corrs3.alt = ggarrange(pca.corrs.s1, 
+          ggarrange(pca.corrs.s2, pca.corrs.s3, nrow=1, labels=c("B", "C")), 
+          nrow=2, labels=c("A", ""))
+
 
 long.df$Variable = as.numeric(long.df$Variable)
 g.pca.part.2 = ggarrange(
@@ -277,10 +315,7 @@ pca.corrs.alt = ggplot(plot.long.df, aes(x=name, y=Value-22*(set-1), color=col))
 
 
 
-sf = 2
-png("pca-igj.png", width=800*sf, height=600*sf, res=72*sf)
-g.pca.part.1
-dev.off()
+
 
 png("pca-ids.png", width=500*sf, height=500*sf, res=72*sf)
 g.pca.part.2
@@ -292,6 +327,10 @@ dev.off()
 
 png("pca-corrs-alt.png", width=600*sf, height=400*sf, res=72*sf)
 pca.corrs.alt
+dev.off()
+
+png("pca-corrs3-alt.png", width=600*sf, height=400*sf, res=72*sf)
+pca.corrs3.alt
 dev.off()
 
 ggplot(long.sub, aes(x = Value, y=pca1)) + geom_point() + facet_wrap(~Variable)
@@ -345,6 +384,10 @@ plot.dc = data.frame()
 p.df = data.frame()
 ref = 1
 
+row_strings <- paste0(dcs[,1], " (", dcs[,2], ")")
+final_string <- paste(row_strings, collapse = "; ")
+cat(gsub("-a", "", final_string))
+
 myt = function(x) {
   return(sqrt(x))
 }
@@ -393,20 +436,44 @@ for(i in 1:nrow(dcs)) {
   anova(my.lmm, my.null)
   
  ##########
-  
-  
-  plot.dc.tmp = plot.dc[[ref]] 
-#  dc.list[[ref]] = ggplot(plot.dc[[ref]], aes(x=plot.dc[[ref]][[2]], y=1/Value, label=ccode)) +
-#                        geom_point() + geom_smooth(method="lm") +
-#    labs(x=colnames(plot.dc[[ref]])[2], y=paste0("1/",plot.dc[[ref]][1,5],collapse=""))
-  my.lm = lm(plot.dc.tmp$Value ~ sqrt(plot.dc.tmp[[2]]))
-  pval = round(summary(my.lm)$coefficients[2,4], digits=3)
-  dc.list[[ref]] = ggplot(plot.dc.tmp, aes(x=sqrt(plot.dc.tmp[[2]]), y=(Value), label=ccode)) +
-                           geom_point() + geom_smooth(method="lm") +
-        labs(x=paste0("sqrt ", colnames(plot.dc.tmp)[2], collapse=""), y=paste0("",plot.dc.tmp[1,5],collapse="")) +
-    annotate("text", x=0.15, y = max(plot.dc.tmp$Value)-1, label=paste0(i," p=",pval,collapse=""))
-  ref = ref+1
+  library(phytools)
+  country = "Tanzania"
+  tree.path <- paste0("clean/",country,".nwk")
+  if (!file.exists(tree.path)) {
+    stop(paste("No newick-tree for", country, "in clean directory"))
   }
-}
-ggarrange(plotlist=dc.list)
+  
+  if (!file.exists("clean/kleborate-dichotomized.csv")) {
+    stop("Run preprocess_kleborate.R first!")
+  }
+  
+  resistance.df <- read.csv("clean/kleborate-dichotomized.csv")
+  featurenames <- setdiff(colnames(resistance.df), "id")
+  
+  ctree <- curate.tree(tree.path, 
+                       "clean/kleborate-dichotomized.csv")
+  
+ctree.tmp = ctree
+colnames(ctree.tmp$data) = gsub("_acquired", "-a", colnames(ctree.tmp$data))
+colnames(ctree.tmp$data) = gsub("_mutations", "-m", colnames(ctree.tmp$data))
+res.tmp = country.list$Tanzania$seed.1
+res.tmp$bubbles$Name = gsub("_acquired", "-a", res.tmp$bubbles$Name)
+res.tmp$bubbles$Name = gsub("_mutations", "-m", res.tmp$bubbles$Name)
+res.tmp$featurenames = gsub("_acquired", "-a", res.tmp$featurenames)
+res.tmp$featurenames = gsub("_mutations", "-m", res.tmp$featurenames)
 
+g.fig2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
+            ),
+          ggarrange(
+            plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+            plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                        edge.check.overlap = FALSE, edge.label.angle = "none",
+                                        no.times = TRUE),
+            nrow=2, labels=c("D", "E")), 
+          nrow=1, labels=c("C", ""))
+
+png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
+g.fig2
+dev.off()
