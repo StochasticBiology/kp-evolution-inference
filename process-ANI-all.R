@@ -198,6 +198,14 @@ png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
 ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
 dev.off()
 
+zanzibar.tree <- curate.tree("data/zanzibar-4-tree-1.phy", "data/zanzibar-dichotomized.csv")
+png("new-data-zanzibar.png", width=600*sf, height=600*sf, res=72*sf)
+plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 3) +
+  coord_cartesian(clip = "off") + theme(
+    plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+  )
+dev.off()
+
 all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
   3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
 

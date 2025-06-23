@@ -1,11 +1,13 @@
 library(ggplot2)
 library(ggbeeswarm)
+library(ggrepel)
 library(countrycode)
 library(hypertrapsct)
 library(tidyr)
 library(dplyr)
 
 df = read.csv("igj-all-bubbles.csv", sep=";", stringsAsFactors = FALSE)
+df = df[df$country != "USA2" & df$country != "USA3",]
 region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
 region$oldval = region$val
 region$val = gsub("Central Europe, Eastern Europe, and Central Asia", "CEEECA", region$val)
@@ -43,7 +45,7 @@ wide_df2 <- df %>%
             .groups = "drop") %>%
   pivot_wider(names_from = OriginalIndex, values_from = c(SumProbTime, SD))
 
-gbd.map = data.frame()
+gbd.map = data.frame(country=NULL, val=NULL)
 gbd.map <- rbind(gbd.map, c("Burkina Faso","Burkina_Faso"))
 gbd.map <- rbind(gbd.map, c("Czech Republic","Czech_Republic"))
 gbd.map <- rbind(gbd.map, c("Arab Republic of Egypt","Egypt"))
@@ -63,8 +65,9 @@ gbd.map <- rbind(gbd.map, c("R. B. de Venezuela","Venezuela"))
 gbd.map <- rbind(gbd.map, c("United Kingdom","United_Kingdom"))
 gbd.map <- rbind(gbd.map, c("United States of America", "USA"))
 
-region = rbind(region, data.frame(country="Hong Kong", val="Southeast Asia, East Asia, and Oceania"))
-region = rbind(region, data.frame(country="Guadeloupe", val="Latin America and Caribbean"))
+region = rbind(region, data.frame(country="Hong Kong", val="SEEAO", oldval="Southeast Asia, East Asia, and Oceania"))
+region = rbind(region, data.frame(country="Guadeloupe", val="LAC", oldval="Latin America and Caribbean"))
+region = rbind(region, data.frame(country="Zanzibar", val="SSAf", oldval="Sub-Saharan Africa"))
 
 for(i in 1:nrow(region)) {
   ref = which(gbd.map[,1] == region$country[i])
@@ -82,9 +85,10 @@ for(i in 1:nrow(wide_df)) {
 }
 
 wide_df$ccode = countrycode(wide_df$country, origin="country.name", destination = "iso3c")
+wide_df$ccode[wide_df$country == "Zanzibar"] = "TZA*"
 
 # Convert to matrix (optional)
-probtime_matrix <- as.matrix(wide_df[,-c(1, ncol(wide_df))])  # Remove 'country' column
+probtime_matrix <- as.matrix(wide_df[,-c(1, (ncol(wide_df))-0:1)])  # Remove 'country' column
 rownames(probtime_matrix) <- wide_df$country
 
 pca_result <- prcomp(probtime_matrix, scale. = TRUE)
@@ -117,7 +121,8 @@ g.pca.ellipse = g.pca + stat_ellipse(
   linewidth=1.5,
   alpha = 0.25      # transparency
   #color = NA        # optional: remove ellipse borders
-)  +  theme_minimal()+ theme(legend.position = "bottom")
+)  +  theme_minimal()+ theme(legend.position = "bottom") +
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca1, y=pca2, label=country, fill=region), pch = 21, color="black")
 
 g.pca2 = ggplot(pca.df, aes(x=pca3, y=pca2, color=region, label=country, fill=region)) + 
   geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75) + theme_minimal()  + labs(x="PCA3", y="PCA2")
@@ -127,7 +132,9 @@ g.pca2.ellipse = g.pca2 + stat_ellipse(
   linewidth=1.5,
   alpha = 0.25      # transparency
  # color = NA        # optional: remove ellipse borders
-) + theme(legend.position = "bottom")
+) + theme(legend.position = "bottom")+
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca3, y=pca2, label=country, fill=region), pch = 21, color="black")
+
 
 pca.df$country == wide_df$country
 
@@ -365,8 +372,15 @@ g.region.ind = ggplot(long.df[long.df$Variable %in% c(set.1,set.2),],
   geom_vline(xintercept = 5.5) +
   theme_minimal() + labs(x="Feature", y="Expected acquisition ordering", fill="Region")
 
+g.region.2z = g.region.2 + 
+  geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
+             aes(x=region, y=pca2, fill=region, label=ccode), pch=21, size=4)
+g.region.3z = g.region.3 + 
+  geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
+             aes(x=region, y=pca3, fill=region, label=ccode), pch=21, size=4)
+
 png("pca-orders.png", width=500*sf, height=400*sf, res=72*sf)
-ggarrange(ggarrange(g.region.2, g.region.3, nrow=1, labels=c("A", "B")), g.region.ind, nrow=2, labels=c("", "C"))
+ggarrange(ggarrange(g.region.2z, g.region.3z, nrow=1, labels=c("A", "B")), g.region.ind, nrow=2, labels=c("", "C"))
 #ggarrange(g.region.2, g.region.3, g.region.ind, nrow=3)
 dev.off()
 
