@@ -1,16 +1,27 @@
 library(phangorn)
 library(ape)
-source("hypertraps.R")
+library(hypertrapsct)
+library(igraph)
+library(stringr)
 library(ggtree)
+library(ggraph)
+library(ggplot2)
+library(ggpubr)
+
+run.inference = FALSE
 options(ignore.negative.edge=TRUE)
 
 sf = 2
 
 # read summary ANI scores from all-all comparison (old and new)
-df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
+df = read.csv("data/138-summary.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
-df.mis = read.csv("138-bases.txt", skip=1, sep=" ", header=FALSE)
+df.mis = read.csv("data/138-bases.txt", skip=1, sep=" ", header=FALSE)
 colnames(df.mis) = c("isolate.1", "isolate.2", "bases")
+
+# "2457" = old
+# "SAMN" = Kleborate
+# "247"etc = new
 
 df.mis = cbind(df.mis, data.frame(ani=df$ani))
 df.mis$class = 0
@@ -75,10 +86,16 @@ png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
 print(vert.tree)
 dev.off()
 
-ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
+png("tree-all-circ.png", width=800*sf, height=800*sf, res=72*sf)
+ggtree(treeNJ) +  geom_tiplab(aes(label=label,angle=angle), size=2,color = tip.cols) + 
+  layout_circular() +
+  theme(
+    plot.margin = unit(c(3, 0, 3, 0), "cm")  # top, right, bottom, left
+  )
+dev.off()
 
 # pull the feature sets from the new dataset
-tmpdf = read.csv("../From_Olav_fixed/dichotomized_1_3_8.csv")
+tmpdf = read.csv("data/dichotomized_1_3_8.csv")
 tmpdf = cbind(tmpdf$strain, tmpdf)
 colnames(tmpdf)[c(1,2)] = c("X", "id")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
@@ -86,9 +103,9 @@ f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
 new.set = curate.tree(treeNJ, f.df) # XXX why doesn't this throw an error -- as we don't have the old features yet?
 
 # get the old tree based on LIN codes
-old.tree = read.tree("../From_Olav_fixed/Tanzania.nwk")
+old.tree = read.tree("data/Tanzania.nwk")
 # and the old dataset of features
-old.refs = read.csv("../From_Olav_fixed/tanzania-resistance-profiles.csv")
+old.refs = read.csv("data/tanzania-resistance-profiles.csv")
 for(i in 1:length(old.tree$tip.label)) {
   r = which(old.refs$id == old.tree$tip.label[i])
   old.tree$tip.label[i] = old.refs$displayname[r]
@@ -103,10 +120,14 @@ plotHypercube.curated.tree(old.ct)
 plot.old = plotHypercube.curated.tree(old.ct)
 
 # do the inference (should match Olav's output)
+if(run.inference == TRUE) {
 old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
                      length = 5, kernel = 3, walkers = 400,
                      seed = 1)
-
+  save.image("fitted-analysed-138.RData")
+} else {
+  load("fitted-analysed-138.RData")
+}
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
 
@@ -127,6 +148,55 @@ fboth.df = rbind(f.df, f2.df)
 # now curate the all tree with the all dataset
 all.ct = curate.tree(treeNJ, fboth.df)
 plotHypercube.curated.tree(all.ct)
+
+# "2457" = old
+# "SAMN" = Kleborate
+# "247"etc = new
+
+old.sabrina = fboth.df[grep("2457", fboth.df$id),]
+new.sabrina = fboth.df[-c(grep("2457", fboth.df$id),grep("SAMN", fboth.df$id)),]
+kleb.df = fboth.df[grep("SAMN", fboth.df$id),]
+old.sabrina.ct = curate.tree(treeNJ, old.sabrina)
+new.sabrina.ct = curate.tree(treeNJ, new.sabrina)
+kleb.df.ct = curate.tree(treeNJ, kleb.df)
+
+ct.plots = ggarrange(plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ),
+          plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ),
+          plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ), 
+          nrow=1, labels=c("A", "B", "C"))
+
+library(dplyr)
+get_proportions <- function(df, name) {
+  data.frame(
+    column = names(df),
+    proportion = colMeans(df == 1),
+    dataset = name
+  )
+}
+df_summary <- bind_rows(
+  get_proportions(old.sabrina, "2002"),
+  get_proportions(new.sabrina, "2015"),
+  get_proportions(kleb.df, "Kleborate")
+)
+
+
+comp.plot = ggplot(df_summary[df_summary$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
+  geom_col(position="dodge", width=0.65) +  theme_minimal() + theme(axis.text.x = element_text(angle=45, hjust=1)) +
+   scale_fill_manual(values=c("#8888FF", "#880000", "#88888855")) + 
+  labs(x="Feature", y="Proportion\nwith feature", fill = "Dataset")
+
+png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
+ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
+dev.off()
 
 all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
   3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
