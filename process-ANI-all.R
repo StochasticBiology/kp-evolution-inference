@@ -183,8 +183,8 @@ get_proportions <- function(df, name) {
   )
 }
 df_summary <- bind_rows(
-  get_proportions(old.sabrina, "2002"),
-  get_proportions(new.sabrina, "2015"),
+  get_proportions(old.sabrina, "2001"),
+  get_proportions(new.sabrina, "2017"),
   get_proportions(kleb.df, "Kleborate")
 )
 
@@ -198,12 +198,51 @@ png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
 ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
 dev.off()
 
+zanzibar.df = read.csv("data/zanzibar-dichotomized.csv")
+
 zanzibar.tree <- curate.tree("data/zanzibar-4-tree-1.phy", "data/zanzibar-dichotomized.csv")
 png("new-data-zanzibar.png", width=600*sf, height=600*sf, res=72*sf)
 plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 3) +
   coord_cartesian(clip = "off") + theme(
     plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
   )
+dev.off()
+
+
+ct.plots.z = ggarrange(plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 2) +
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                         ),
+                       plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ), 
+                     ncol=2, nrow=2, heights=c(1,2), labels=c("A", "B", "C", "D"))
+ct.plots.z
+
+df_summary.z <- bind_rows(
+  get_proportions(old.sabrina, "2001"),
+  get_proportions(new.sabrina, "2017"),
+  get_proportions(kleb.df, "Kleborate"),
+  get_proportions(zanzibar.df, "Zanzibar")
+)
+
+comp.plot.z = ggplot(df_summary.z[df_summary.z$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
+  geom_col(position="dodge", width=0.7) +  theme_minimal() + 
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  scale_fill_manual(values=c("#88CCFF", "#880000", "#CCCCCC", "#FF8800", "#005500")) + 
+  labs(x="Feature", y="Proportion\nwith feature", fill = "Dataset")
+
+png("new-data-comp-z.png", width=600*sf, height=800*sf, res=72*sf)
+ggarrange( ct.plots.z, comp.plot.z, heights = c(3, 1), labels=c("", "E"), nrow=2)
 dev.off()
 
 all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 

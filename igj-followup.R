@@ -378,9 +378,13 @@ g.region.2z = g.region.2 +
 g.region.3z = g.region.3 + 
   geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
              aes(x=region, y=pca3, fill=region, label=ccode), pch=21, size=4)
+g.region.indz = g.region.ind + 
+  geom_point(data = long.df[long.df$Variable %in% c(set.1, set.2) & long.df$country == "Zanzibar",],
+             aes(x=factor(name, levels=feature.names[c(set.1,set.2)+1]), y=Value, fill=region, label=ccode), 
+             pch=21, size=3, position=position_nudge(x = 0.33))
 
 png("pca-orders.png", width=500*sf, height=400*sf, res=72*sf)
-ggarrange(ggarrange(g.region.2z, g.region.3z, nrow=1, labels=c("A", "B")), g.region.ind, nrow=2, labels=c("", "C"))
+ggarrange(ggarrange(g.region.2z, g.region.3z, nrow=1, labels=c("A", "B")), g.region.indz, nrow=2, labels=c("", "C"))
 #ggarrange(g.region.2, g.region.3, g.region.ind, nrow=3)
 dev.off()
 
