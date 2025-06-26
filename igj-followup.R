@@ -28,6 +28,22 @@ feature.names = tmp$Name[order(tmp$OriginalIndex)]
 feature.names = gsub("_acquired", "-a", feature.names)
 feature.names = gsub("_mutations", "-m", feature.names)
 
+rdf = df[df$country=="Australia", c(1, 3, 5)]
+ncountries = length(unique(df$country))
+for(i in 1:nrow(rdf)) {
+  refs = which(df$Time == rdf$Time[i] & df$OriginalIndex == rdf$OriginalIndex[i])
+  rdf$Probability[i] = sum(df$Probability[refs])/ncountries
+}
+global.plot = ggplot() +
+  geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF") + 
+  geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
+  theme_minimal() + labs(x="Ordinal time", y="KpAMR feature", size="Mean\nacquisition\nprobability")
+
+sf = 2
+png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
+print(global.plot)
+dev.off()
+
 countries <- unique(df$country)
 
 wide_df <- df %>%
