@@ -7,6 +7,7 @@ library(ggtree)
 library(ggraph)
 library(ggplot2)
 library(ggpubr)
+library(dplyr)
 
 run.inference = FALSE
 options(ignore.negative.edge=TRUE)
@@ -86,12 +87,14 @@ png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
 print(vert.tree)
 dev.off()
 
-png("tree-all-circ.png", width=800*sf, height=800*sf, res=72*sf)
-ggtree(treeNJ) +  geom_tiplab(aes(label=label,angle=angle), size=2,color = tip.cols) + 
+circ.tree = ggtree(treeNJ) +  geom_tiplab(aes(label=label,angle=angle), size=2,color = tip.cols) + 
   layout_circular() +
   theme(
     plot.margin = unit(c(3, 0, 3, 0), "cm")  # top, right, bottom, left
   )
+
+png("tree-all-circ.png", width=800*sf, height=800*sf, res=72*sf)
+print(circ.tree)
 dev.off()
 
 # pull the feature sets from the new dataset
@@ -124,9 +127,9 @@ if(run.inference == TRUE) {
 old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
                      length = 5, kernel = 3, walkers = 400,
                      seed = 1)
-  save.image("fitted-analysed-138.RData")
+  save(old.fit, file="fitted-analysed-138-fit.Rdata")
 } else {
-  load("fitted-analysed-138.RData")
+  load("fitted-analysed-138-fit.RData")
 }
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
@@ -174,7 +177,6 @@ ct.plots = ggarrange(plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.
             ), 
           nrow=1, labels=c("A", "B", "C"))
 
-library(dplyr)
 get_proportions <- function(df, name) {
   data.frame(
     column = names(df),
@@ -254,7 +256,11 @@ all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] =
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
-all.data.plot
+all.data.plot = plotHypercube.curated.tree(all.ct, factor.vals = TRUE, hjust = 1, font.size=2) +
+  scale_fill_manual(values = c("white", "grey", "#4444FF", "#FF8888")) +  
+  scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
+
+
 ### need to look into this Rif_acquired behaviour
 
 # some comparisons of ANI to LIN code trees
@@ -336,22 +342,11 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=rank
 predict.plot
 
 sf = 3
-png("predictions-138.png", width=800*sf, height=400*sf, res=72*sf)
-ggarrange(all.data.plot, predict.plot, labels=c("A", "B"))
+png("predictions-138-new.png", width=500*sf, height=600*sf, res=72*sf)
+ggarrange(ggarrange(all.data.plot, predict.plot, widths=c(1.,1), nrow=1, labels=c("A", "B")),
+          comp.plot.z, labels=c("", "C"), nrow=2, heights=c(1.5,1))
 dev.off()
 
-ggplot(preds.ranks, aes(x=ranks, fill=model)) + 
-  geom_density(alpha=0.4) #+ geom_histogram(aes(y=..density..)) #+ facet_wrap(~ model, nrow=3)
-
-
-# do the inference and produce some summary fits
-new.fit = HyperTraPS(all.ct$dests[safe.trans,], initialstates = all.ct$srcs[safe.trans,], 
-                     length = 5, kernel = 3,
-                     seed = 1)
-new.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
-plotHypercube.sampledgraph2(new.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
-
-plotHypercube.bubbles(new.fit, featurenames=new.fit$featurenames)
-
-
-
+png("new-data-summaries.png", width=1000*sf, height=600*sf, res=72*sf)
+ggarrange(ct.plots.z, circ.tree, nrow=1, labels=c("", "E"), widths=c(1,1.3))
+dev.off()
