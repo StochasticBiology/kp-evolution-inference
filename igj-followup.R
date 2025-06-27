@@ -1,6 +1,7 @@
 library(ggplot2)
 library(ggbeeswarm)
 library(ggrepel)
+library(ggpubr)
 library(countrycode)
 library(hypertrapsct)
 library(tidyr)
@@ -34,21 +35,6 @@ feature.names = tmp$Name[order(tmp$OriginalIndex)]
 feature.names = gsub("_acquired", "-a", feature.names)
 feature.names = gsub("_mutations", "-m", feature.names)
 
-rdf = df[df$country=="Australia", c(1, 3, 5)]
-ncountries = length(unique(df$country))
-for(i in 1:nrow(rdf)) {
-  refs = which(df$Time == rdf$Time[i] & df$OriginalIndex == rdf$OriginalIndex[i])
-  rdf$Probability[i] = sum(df$Probability[refs])/ncountries
-}
-global.plot = ggplot() +
-  geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF") + 
-  geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
-  theme_minimal() + labs(x="Ordinal time", y="KpAMR feature", size="Mean\nacquisition\nprobability")
-
-sf = 2
-png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
-print(global.plot)
-dev.off()
 
 countries <- unique(df$country)
 
@@ -518,6 +504,23 @@ png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
 g.fig2
 dev.off()
 
+rdf = df[df$country=="Australia", c(1, 3, 5)]
+ncountries = length(unique(df$country))
+for(i in 1:nrow(rdf)) {
+  refs = which(df$Time == rdf$Time[i] & df$OriginalIndex == rdf$OriginalIndex[i])
+  rdf$Probability[i] = sum(df$Probability[refs])/ncountries
+}
+global.plot = ggplot() +
+  geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF88") + 
+  geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
+  theme_minimal() + labs(x="Ordinal time", y="KpAMR feature", size="Mean\nacquisition\nprobability")
+
+sf = 2
+png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
+print(global.plot)
+dev.off()
+
+
 g.fig2.alt = ggarrange(global.plot,
   plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
                      coord_cartesian(clip = "off") + theme(
@@ -529,3 +532,19 @@ g.fig2.alt = ggarrange(global.plot,
                                                  edge.check.overlap = FALSE, edge.label.angle = "none",
                                                  no.times = TRUE),
                      nrow=2, ncol=2, labels=c("C", "D", "E", "F"))
+
+g.fig2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
+                         ),
+                       ggarrange(
+                         plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                         plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                     edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                     no.times = TRUE),
+                         global.plot,
+                         nrow=3, labels=c("D", "E", "F")), 
+                       nrow=1, labels=c("C", ""), widths=c(1.5,2))
+png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
+g.fig2.alt
+dev.off()
