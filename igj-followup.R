@@ -6,6 +6,12 @@ library(hypertrapsct)
 library(tidyr)
 library(dplyr)
 
+source("hypertraps-wip.R")
+if (!exists("country.list")) {
+  name <- load("all_models.Rdata")
+  country.list <- get(name)
+}
+
 df = read.csv("igj-all-bubbles.csv", sep=";", stringsAsFactors = FALSE)
 df = df[df$country != "USA2" & df$country != "USA3",]
 region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
@@ -511,3 +517,15 @@ g.fig2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=
 png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
 g.fig2
 dev.off()
+
+g.fig2.alt = ggarrange(global.plot,
+  plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                     coord_cartesian(clip = "off") + theme(
+                       plot.margin = unit(c(1, 1, 4, 1), "lines") # top, right, bottom, left
+                     ),
+                   
+                     plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                     plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                 edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                 no.times = TRUE),
+                     nrow=2, ncol=2, labels=c("C", "D", "E", "F"))
