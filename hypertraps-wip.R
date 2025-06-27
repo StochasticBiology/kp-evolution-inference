@@ -1547,13 +1547,15 @@ curate.tree = function(tree.src, data.src,
 #' @param names whether to include tip names (default FALSE)
 #' @param font.size font size for feature names (default 4)
 #' @param hjust horizontal text justification for feature names (default 0)
+#' @param factor.vals whether to treat labelling variables as factor levels (default FALSE)
 #' @return a ggplot
 #' @export
 plotHypercube.curated.tree = function(tree.set,
                                       scale.fn = ggtree::geom_treescale(y=20, linesize=3, width =0.01),
-				      names = FALSE,
+                                      names = FALSE,
                                       font.size=4,
-                                      hjust=0) {
+                                      hjust=0,
+                                      factor.vals = FALSE) {
   data.m = tree.set$data[,2:ncol(tree.set$data)]
   rownames(data.m) = tree.set$data[,1]
   data.m = tree.set$data[1:length(tree.set$tree$tip.label), 2:ncol(tree.set$data)]
@@ -1568,10 +1570,15 @@ plotHypercube.curated.tree = function(tree.set,
   } else {
     g.core = ggtree::ggtree(tree.set$tree) + scale.fn
   }
-  this.plot = ggtree::gheatmap(g.core, data.m, low="white", high="#AAAAAA",
-                       colnames_angle=90, hjust=hjust, font.size=font.size) +
-              ggplot2::theme(legend.position="none")
-
+  if(factor.vals == TRUE) {
+    this.plot = ggtree::gheatmap(g.core, apply(data.m, c(1,2), as.factor),
+                                 colnames_angle=90, hjust=hjust, font.size=font.size) +
+      ggplot2::theme(legend.position="none")
+  } else {
+    this.plot = ggtree::gheatmap(g.core, data.m, low="white", high="#AAAAAA",
+                                 colnames_angle=90, hjust=hjust, font.size=font.size) +
+      ggplot2::theme(legend.position="none")
+  }  
   return(this.plot)
 }
 
