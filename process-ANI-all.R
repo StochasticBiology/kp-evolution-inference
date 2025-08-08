@@ -233,7 +233,7 @@ ct.plots.z
 df_summary.z <- bind_rows(
   get_proportions(old.sabrina, "2001"),
   get_proportions(new.sabrina, "2017"),
-  get_proportions(kleb.df, "Kleborate"),
+  get_proportions(kleb.df, "Pathogenwatch"),
   get_proportions(zanzibar.df, "Zanzibar")
 )
 
