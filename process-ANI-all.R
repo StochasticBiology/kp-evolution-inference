@@ -156,8 +156,8 @@ plotHypercube.curated.tree(all.ct)
 # "SAMN" = Kleborate
 # "247"etc = new
 
-old.sabrina = fboth.df[grep("2457", fboth.df$id),]
-new.sabrina = fboth.df[-c(grep("2457", fboth.df$id),grep("SAMN", fboth.df$id)),]
+old.sabrina = fboth.df[grep("^2457", fboth.df$id),]
+new.sabrina = fboth.df[-c(grep("^2457", fboth.df$id),grep("SAMN", fboth.df$id)),]
 kleb.df = fboth.df[grep("SAMN", fboth.df$id),]
 old.sabrina.ct = curate.tree(treeNJ, old.sabrina)
 new.sabrina.ct = curate.tree(treeNJ, new.sabrina)
@@ -187,14 +187,14 @@ get_proportions <- function(df, name) {
 df_summary <- bind_rows(
   get_proportions(old.sabrina, "2001"),
   get_proportions(new.sabrina, "2017"),
-  get_proportions(kleb.df, "Kleborate")
+  get_proportions(kleb.df, "Pathogenwatch")
 )
 
 
 comp.plot = ggplot(df_summary[df_summary$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
   geom_col(position="dodge", width=0.65) +  theme_minimal() + theme(axis.text.x = element_text(angle=45, hjust=1)) +
    scale_fill_manual(values=c("#8888FF", "#880000", "#88888855")) + 
-  labs(x="Feature", y="Proportion\nwith feature", fill = "Dataset")
+  labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
 
 png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
 ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
@@ -241,21 +241,26 @@ comp.plot.z = ggplot(df_summary.z[df_summary.z$column != "id",], aes(x=column, y
   geom_col(position="dodge", width=0.7) +  theme_minimal() + 
   theme(axis.text.x = element_text(angle=45, hjust=1)) +
   scale_fill_manual(values=c("#88CCFF", "#880000", "#CCCCCC", "#FF8800", "#005500")) + 
-  labs(x="Feature", y="Proportion\nwith feature", fill = "Dataset")
+  labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
 
 png("new-data-comp-z.png", width=600*sf, height=800*sf, res=72*sf)
 ggarrange( ct.plots.z, comp.plot.z, heights = c(3, 1), labels=c("", "E"), nrow=2)
 dev.off()
 
-all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
-  3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
+# SAMN = Kleborate = highest multiplier (x3)
+# 2457 = old = next multiplier (x2)
+# remaining 247 = new = no multiplier (1)
 
-all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] = 
-  2*all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)]
+all.ct$data[grepl("^247", all.ct$data$label),2:ncol(all.ct$data)] = 
+  3*all.ct$data[grepl("^247", all.ct$data$label),2:ncol(all.ct$data)]
+
+all.ct$data[grepl("^2457", all.ct$data$label),2:ncol(all.ct$data)] = 
+  2*all.ct$data[grepl("^2457", all.ct$data$label),2:ncol(all.ct$data)]
 
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
+# so new = red, old = blue, Kleborate = grey
 all.data.plot = plotHypercube.curated.tree(all.ct, factor.vals = TRUE, hjust = 1, font.size=2) +
   scale_fill_manual(values = c("white", "grey", "#4444FF", "#FF8888")) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
@@ -350,3 +355,4 @@ dev.off()
 png("new-data-summaries.png", width=1000*sf, height=600*sf, res=72*sf)
 ggarrange(ct.plots.z, circ.tree, nrow=1, labels=c("", "E"), widths=c(1,1.3))
 dev.off()
+

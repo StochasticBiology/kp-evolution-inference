@@ -378,7 +378,7 @@ g.region.ind = ggplot(long.df[long.df$Variable %in% c(set.1,set.2),],
   scale_fill_viridis_d(option="magma") +
   geom_hline(yintercept = 11) +
   geom_vline(xintercept = 5.5) +
-  theme_minimal() + labs(x="Feature", y="Expected acquisition ordering", fill="Region")
+  theme_minimal() + labs(x="Character", y="Expected acquisition ordering", fill="Region")
 
 g.region.2z = g.region.2 + 
   geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
@@ -513,7 +513,7 @@ for(i in 1:nrow(rdf)) {
 global.plot = ggplot() +
   geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF88") + 
   geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
-  theme_minimal() + labs(x="Ordinal time", y="KpAMR feature", size="Mean\nacquisition\nprobability")
+  theme_minimal() + labs(x="Ordinal time", y="KpAMR character", size="Mean\nacquisition\nprobability")
 
 sf = 2
 png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
