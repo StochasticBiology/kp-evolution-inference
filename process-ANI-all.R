@@ -237,7 +237,7 @@ df_summary.z <- bind_rows(
   get_proportions(zanzibar.df, "Zanzibar")
 )
 
-comp.plot.z = ggplot(df_summary.z[df_summary.z$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
+comp.plot.z = ggplot(df_summary.z[!(df_summary.z$column %in% c("id","strain")),], aes(x=column, y=proportion, fill=dataset)) + 
   geom_col(position="dodge", width=0.7) +  theme_minimal() + 
   theme(axis.text.x = element_text(angle=45, hjust=1)) +
   scale_fill_manual(values=c("#88CCFF", "#880000", "#CCCCCC", "#FF8800", "#005500")) + 
