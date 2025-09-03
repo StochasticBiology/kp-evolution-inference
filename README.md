@@ -19,3 +19,5 @@ Here we have (in set1/)
 * `run.sh` illustrating the pipeline
 
 `reversibility-control.R` explores how much of an issue reversible transitions are in the source data
+
+Now folded into this are bits of Olav's pipeline, which are pulled with `igj.R` and plotted with `igj-followup.R`, forming the bulk of the figures for the paper. Between this and `process-ANI-all.R` (the input files for which are now in `data/`), the current paper figures are produced

@@ -1,11 +1,20 @@
 library(ggplot2)
 library(ggbeeswarm)
+library(ggrepel)
+library(ggpubr)
 library(countrycode)
 library(hypertrapsct)
 library(tidyr)
 library(dplyr)
 
+source("hypertraps-wip.R")
+if (!exists("country.list")) {
+  name <- load("all_models.Rdata")
+  country.list <- get(name)
+}
+
 df = read.csv("igj-all-bubbles.csv", sep=";", stringsAsFactors = FALSE)
+df = df[df$country != "USA2" & df$country != "USA3",]
 region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
 region$oldval = region$val
 region$val = gsub("Central Europe, Eastern Europe, and Central Asia", "CEEECA", region$val)
@@ -26,6 +35,7 @@ feature.names = tmp$Name[order(tmp$OriginalIndex)]
 feature.names = gsub("_acquired", "-a", feature.names)
 feature.names = gsub("_mutations", "-m", feature.names)
 
+
 countries <- unique(df$country)
 
 wide_df <- df %>%
@@ -43,7 +53,7 @@ wide_df2 <- df %>%
             .groups = "drop") %>%
   pivot_wider(names_from = OriginalIndex, values_from = c(SumProbTime, SD))
 
-gbd.map = data.frame()
+gbd.map = data.frame(country=NULL, val=NULL)
 gbd.map <- rbind(gbd.map, c("Burkina Faso","Burkina_Faso"))
 gbd.map <- rbind(gbd.map, c("Czech Republic","Czech_Republic"))
 gbd.map <- rbind(gbd.map, c("Arab Republic of Egypt","Egypt"))
@@ -63,8 +73,9 @@ gbd.map <- rbind(gbd.map, c("R. B. de Venezuela","Venezuela"))
 gbd.map <- rbind(gbd.map, c("United Kingdom","United_Kingdom"))
 gbd.map <- rbind(gbd.map, c("United States of America", "USA"))
 
-region = rbind(region, data.frame(country="Hong Kong", val="Southeast Asia, East Asia, and Oceania"))
-region = rbind(region, data.frame(country="Guadeloupe", val="Latin America and Caribbean"))
+region = rbind(region, data.frame(country="Hong Kong", val="SEEAO", oldval="Southeast Asia, East Asia, and Oceania"))
+region = rbind(region, data.frame(country="Guadeloupe", val="LAC", oldval="Latin America and Caribbean"))
+region = rbind(region, data.frame(country="Zanzibar", val="SSAf", oldval="Sub-Saharan Africa"))
 
 for(i in 1:nrow(region)) {
   ref = which(gbd.map[,1] == region$country[i])
@@ -82,9 +93,10 @@ for(i in 1:nrow(wide_df)) {
 }
 
 wide_df$ccode = countrycode(wide_df$country, origin="country.name", destination = "iso3c")
+wide_df$ccode[wide_df$country == "Zanzibar"] = "TZA*"
 
 # Convert to matrix (optional)
-probtime_matrix <- as.matrix(wide_df[,-c(1, ncol(wide_df))])  # Remove 'country' column
+probtime_matrix <- as.matrix(wide_df[,-c(1, (ncol(wide_df))-0:1)])  # Remove 'country' column
 rownames(probtime_matrix) <- wide_df$country
 
 pca_result <- prcomp(probtime_matrix, scale. = TRUE)
@@ -117,7 +129,8 @@ g.pca.ellipse = g.pca + stat_ellipse(
   linewidth=1.5,
   alpha = 0.25      # transparency
   #color = NA        # optional: remove ellipse borders
-)  +  theme_minimal()+ theme(legend.position = "bottom")
+)  +  theme_minimal()+ theme(legend.position = "bottom") +
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca1, y=pca2, label=country, fill=region), pch = 21, color="black")
 
 g.pca2 = ggplot(pca.df, aes(x=pca3, y=pca2, color=region, label=country, fill=region)) + 
   geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75) + theme_minimal()  + labs(x="PCA3", y="PCA2")
@@ -127,7 +140,9 @@ g.pca2.ellipse = g.pca2 + stat_ellipse(
   linewidth=1.5,
   alpha = 0.25      # transparency
  # color = NA        # optional: remove ellipse borders
-) + theme(legend.position = "bottom")
+) + theme(legend.position = "bottom")+
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca3, y=pca2, label=country, fill=region), pch = 21, color="black")
+
 
 pca.df$country == wide_df$country
 
@@ -363,10 +378,21 @@ g.region.ind = ggplot(long.df[long.df$Variable %in% c(set.1,set.2),],
   scale_fill_viridis_d(option="magma") +
   geom_hline(yintercept = 11) +
   geom_vline(xintercept = 5.5) +
-  theme_minimal() + labs(x="Feature", y="Expected acquisition ordering", fill="Region")
+  theme_minimal() + labs(x="Character", y="Expected acquisition ordering", fill="Region")
+
+g.region.2z = g.region.2 + 
+  geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
+             aes(x=region, y=pca2, fill=region, label=ccode), pch=21, size=4)
+g.region.3z = g.region.3 + 
+  geom_point(data = long.df[long.df$Variable == 1 & long.df$country == "Zanzibar",],
+             aes(x=region, y=pca3, fill=region, label=ccode), pch=21, size=4)
+g.region.indz = g.region.ind + 
+  geom_point(data = long.df[long.df$Variable %in% c(set.1, set.2) & long.df$country == "Zanzibar",],
+             aes(x=factor(name, levels=feature.names[c(set.1,set.2)+1]), y=Value, fill=region, label=ccode), 
+             pch=21, size=3, position=position_nudge(x = 0.33))
 
 png("pca-orders.png", width=500*sf, height=400*sf, res=72*sf)
-ggarrange(ggarrange(g.region.2, g.region.3, nrow=1, labels=c("A", "B")), g.region.ind, nrow=2, labels=c("", "C"))
+ggarrange(ggarrange(g.region.2z, g.region.3z, nrow=1, labels=c("A", "B")), g.region.indz, nrow=2, labels=c("", "C"))
 #ggarrange(g.region.2, g.region.3, g.region.ind, nrow=3)
 dev.off()
 
@@ -476,4 +502,49 @@ g.fig2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=
 
 png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
 g.fig2
+dev.off()
+
+rdf = df[df$country=="Australia", c(1, 3, 5)]
+ncountries = length(unique(df$country))
+for(i in 1:nrow(rdf)) {
+  refs = which(df$Time == rdf$Time[i] & df$OriginalIndex == rdf$OriginalIndex[i])
+  rdf$Probability[i] = sum(df$Probability[refs])/ncountries
+}
+global.plot = ggplot() +
+  geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF88") + 
+  geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
+  theme_minimal() + labs(x="Ordinal time", y="KpAMR character", size="Mean\nacquisition\nprobability")
+
+sf = 2
+png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
+print(global.plot)
+dev.off()
+
+
+g.fig2.alt = ggarrange(global.plot,
+  plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                     coord_cartesian(clip = "off") + theme(
+                       plot.margin = unit(c(1, 1, 4, 1), "lines") # top, right, bottom, left
+                     ),
+                   
+                     plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                     plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                 edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                 no.times = TRUE),
+                     nrow=2, ncol=2, labels=c("C", "D", "E", "F"))
+
+g.fig2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
+                         ),
+                       ggarrange(
+                         plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                         plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                     edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                     no.times = TRUE),
+                         global.plot,
+                         nrow=3, labels=c("D", "E", "F")), 
+                       nrow=1, labels=c("C", ""), widths=c(1.5,2))
+png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
+g.fig2.alt
 dev.off()

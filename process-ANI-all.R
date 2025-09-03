@@ -1,16 +1,28 @@
 library(phangorn)
 library(ape)
-source("hypertraps.R")
+library(hypertrapsct)
+library(igraph)
+library(stringr)
 library(ggtree)
+library(ggraph)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+
+run.inference = FALSE
 options(ignore.negative.edge=TRUE)
 
 sf = 2
 
 # read summary ANI scores from all-all comparison (old and new)
-df = read.csv("138-summary.txt", skip=1, sep=" ", header=FALSE)
+df = read.csv("data/138-summary.txt", skip=1, sep=" ", header=FALSE)
 colnames(df) = c("isolate.1", "isolate.2", "ani")
-df.mis = read.csv("138-bases.txt", skip=1, sep=" ", header=FALSE)
+df.mis = read.csv("data/138-bases.txt", skip=1, sep=" ", header=FALSE)
 colnames(df.mis) = c("isolate.1", "isolate.2", "bases")
+
+# "2457" = old
+# "SAMN" = Kleborate
+# "247"etc = new
 
 df.mis = cbind(df.mis, data.frame(ani=df$ani))
 df.mis$class = 0
@@ -75,10 +87,18 @@ png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
 print(vert.tree)
 dev.off()
 
-ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols) + layout_circular()
+circ.tree = ggtree(treeNJ) +  geom_tiplab(aes(label=label,angle=angle), size=2,color = tip.cols) + 
+  layout_circular() +
+  theme(
+    plot.margin = unit(c(3, 0, 3, 0), "cm")  # top, right, bottom, left
+  )
+
+png("tree-all-circ.png", width=800*sf, height=800*sf, res=72*sf)
+print(circ.tree)
+dev.off()
 
 # pull the feature sets from the new dataset
-tmpdf = read.csv("../From_Olav_fixed/dichotomized_1_3_8.csv")
+tmpdf = read.csv("data/dichotomized_1_3_8.csv")
 tmpdf = cbind(tmpdf$strain, tmpdf)
 colnames(tmpdf)[c(1,2)] = c("X", "id")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
@@ -86,9 +106,9 @@ f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
 new.set = curate.tree(treeNJ, f.df) # XXX why doesn't this throw an error -- as we don't have the old features yet?
 
 # get the old tree based on LIN codes
-old.tree = read.tree("../From_Olav_fixed/Tanzania.nwk")
+old.tree = read.tree("data/Tanzania.nwk")
 # and the old dataset of features
-old.refs = read.csv("../From_Olav_fixed/tanzania-resistance-profiles.csv")
+old.refs = read.csv("data/tanzania-resistance-profiles.csv")
 for(i in 1:length(old.tree$tip.label)) {
   r = which(old.refs$id == old.tree$tip.label[i])
   old.tree$tip.label[i] = old.refs$displayname[r]
@@ -103,10 +123,14 @@ plotHypercube.curated.tree(old.ct)
 plot.old = plotHypercube.curated.tree(old.ct)
 
 # do the inference (should match Olav's output)
+if(run.inference == TRUE) {
 old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
                      length = 5, kernel = 3, walkers = 400,
                      seed = 1)
-
+  save(old.fit, file="fitted-analysed-138-fit.Rdata")
+} else {
+  load("fitted-analysed-138-fit.RData")
+}
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
 
@@ -128,16 +152,120 @@ fboth.df = rbind(f.df, f2.df)
 all.ct = curate.tree(treeNJ, fboth.df)
 plotHypercube.curated.tree(all.ct)
 
-all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)] = 
-  3*all.ct$data[grepl("SAMN", all.ct$data$label),2:ncol(all.ct$data)]
+# "2457" = old
+# "SAMN" = Kleborate
+# "247"etc = new
 
-all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)] = 
-  2*all.ct$data[grepl("2457", all.ct$data$label),2:ncol(all.ct$data)]
+old.sabrina = fboth.df[grep("^2457", fboth.df$id),]
+new.sabrina = fboth.df[-c(grep("^2457", fboth.df$id),grep("SAMN", fboth.df$id)),]
+kleb.df = fboth.df[grep("SAMN", fboth.df$id),]
+old.sabrina.ct = curate.tree(treeNJ, old.sabrina)
+new.sabrina.ct = curate.tree(treeNJ, new.sabrina)
+kleb.df.ct = curate.tree(treeNJ, kleb.df)
+
+ct.plots = ggarrange(plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ),
+          plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ),
+          plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+            coord_cartesian(clip = "off") + theme(
+              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+            ), 
+          nrow=1, labels=c("A", "B", "C"))
+
+get_proportions <- function(df, name) {
+  data.frame(
+    column = names(df),
+    proportion = colMeans(df == 1),
+    dataset = name
+  )
+}
+df_summary <- bind_rows(
+  get_proportions(old.sabrina, "2001"),
+  get_proportions(new.sabrina, "2017"),
+  get_proportions(kleb.df, "Pathogenwatch")
+)
+
+
+comp.plot = ggplot(df_summary[df_summary$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
+  geom_col(position="dodge", width=0.65) +  theme_minimal() + theme(axis.text.x = element_text(angle=45, hjust=1)) +
+   scale_fill_manual(values=c("#8888FF", "#880000", "#88888855")) + 
+  labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
+
+png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
+ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
+dev.off()
+
+zanzibar.df = read.csv("data/zanzibar-dichotomized.csv")
+
+zanzibar.tree <- curate.tree("data/zanzibar-4-tree-1.phy", "data/zanzibar-dichotomized.csv")
+png("new-data-zanzibar.png", width=600*sf, height=600*sf, res=72*sf)
+plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 3) +
+  coord_cartesian(clip = "off") + theme(
+    plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+  )
+dev.off()
+
+
+ct.plots.z = ggarrange(plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 2) +
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                         ),
+                       plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ), 
+                     ncol=2, nrow=2, heights=c(1,2), labels=c("A", "B", "C", "D"))
+ct.plots.z
+
+df_summary.z <- bind_rows(
+  get_proportions(old.sabrina, "2001"),
+  get_proportions(new.sabrina, "2017"),
+  get_proportions(kleb.df, "Pathogenwatch"),
+  get_proportions(zanzibar.df, "Zanzibar")
+)
+
+comp.plot.z = ggplot(df_summary.z[!(df_summary.z$column %in% c("id","strain")),], aes(x=column, y=proportion, fill=dataset)) + 
+  geom_col(position="dodge", width=0.7) +  theme_minimal() + 
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  scale_fill_manual(values=c("#88CCFF", "#880000", "#CCCCCC", "#FF8800", "#005500")) + 
+  labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
+
+png("new-data-comp-z.png", width=600*sf, height=800*sf, res=72*sf)
+ggarrange( ct.plots.z, comp.plot.z, heights = c(3, 1), labels=c("", "E"), nrow=2)
+dev.off()
+
+# SAMN = Kleborate = highest multiplier (x3)
+# 2457 = old = next multiplier (x2)
+# remaining 247 = new = no multiplier (1)
+
+all.ct$data[grepl("^247", all.ct$data$label),2:ncol(all.ct$data)] = 
+  3*all.ct$data[grepl("^247", all.ct$data$label),2:ncol(all.ct$data)]
+
+all.ct$data[grepl("^2457", all.ct$data$label),2:ncol(all.ct$data)] = 
+  2*all.ct$data[grepl("^2457", all.ct$data$label),2:ncol(all.ct$data)]
 
 all.data.plot = plotHypercube.curated.tree(all.ct, hjust=1, font.size = 2) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
-all.data.plot
+# so new = red, old = blue, Kleborate = grey
+all.data.plot = plotHypercube.curated.tree(all.ct, factor.vals = TRUE, hjust = 1, font.size=2) +
+  scale_fill_manual(values = c("white", "grey", "#4444FF", "#FF8888")) +  
+  scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
+
+
 ### need to look into this Rif_acquired behaviour
 
 # some comparisons of ANI to LIN code trees
@@ -219,22 +347,12 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=rank
 predict.plot
 
 sf = 3
-png("predictions-138.png", width=800*sf, height=400*sf, res=72*sf)
-ggarrange(all.data.plot, predict.plot, labels=c("A", "B"))
+png("predictions-138-new.png", width=500*sf, height=600*sf, res=72*sf)
+ggarrange(ggarrange(all.data.plot, predict.plot, widths=c(1.,1), nrow=1, labels=c("A", "B")),
+          comp.plot.z, labels=c("", "C"), nrow=2, heights=c(1.5,1))
 dev.off()
 
-ggplot(preds.ranks, aes(x=ranks, fill=model)) + 
-  geom_density(alpha=0.4) #+ geom_histogram(aes(y=..density..)) #+ facet_wrap(~ model, nrow=3)
-
-
-# do the inference and produce some summary fits
-new.fit = HyperTraPS(all.ct$dests[safe.trans,], initialstates = all.ct$srcs[safe.trans,], 
-                     length = 5, kernel = 3,
-                     seed = 1)
-new.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
-plotHypercube.sampledgraph2(new.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
-
-plotHypercube.bubbles(new.fit, featurenames=new.fit$featurenames)
-
-
+png("new-data-summaries.png", width=1000*sf, height=600*sf, res=72*sf)
+ggarrange(ct.plots.z, circ.tree, nrow=1, labels=c("", "E"), widths=c(1,1.3))
+dev.off()
 
