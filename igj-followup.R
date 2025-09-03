@@ -2,6 +2,7 @@ library(ggplot2)
 library(ggbeeswarm)
 library(ggrepel)
 library(ggpubr)
+library(ggupset)
 library(countrycode)
 library(hypertrapsct)
 library(tidyr)
@@ -479,6 +480,19 @@ for(i in 1:nrow(dcs)) {
   ctree <- curate.tree(tree.path, 
                        "clean/kleborate-dichotomized.csv")
   
+  ### upset plot
+  resistance.df.l <- pivot_longer(resistance.df, setdiff(colnames(resistance.df), "id"))
+  resistance.df.l <- resistance.df.l[resistance.df.l$value==1,]
+  
+  upset.plot <- resistance.df.l %>% 
+    group_by(id) %>% 
+    dplyr::summarize(Genes = list(name)) %>% 
+    ggplot(aes(x = Genes)) + 
+    geom_bar() + 
+    scale_x_upset(n_intersections=30) +
+    labs(x="Resistance character profiles", y="Count") 
+  upset.plot
+  
 ctree.tmp = ctree
 colnames(ctree.tmp$data) = gsub("_acquired", "-a", colnames(ctree.tmp$data))
 colnames(ctree.tmp$data) = gsub("_mutations", "-m", colnames(ctree.tmp$data))
@@ -502,6 +516,44 @@ g.fig2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=
 
 png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
 g.fig2
+dev.off()
+
+png("igj-upset.png", width=600*sf, height=600*sf, res=72*sf)
+upset.plot
+dev.off()
+
+#### world map plot
+
+c.df = data.frame()
+cnames = names(country.list)
+for(country in cnames) {
+  tree.path <- paste0("clean/",country,".tsv")
+  if (file.exists(tree.path)) {
+    tmp = read.csv(tree.path, sep="\t")
+    c.df = rbind(c.df, data.frame(country=country, count=nrow(tmp)))
+  }
+}
+
+c.df$country = gsub("_", " ", c.df$country)
+c.df$country[c.df$country=="United Kingdom"] <- "UK"
+
+# Get map data
+world <- map_data("world")
+
+# Merge your counts with map polygons
+world_data <- world %>%
+  left_join(c.df, by = c("region" = "country"))
+
+# Plot
+plot.world = ggplot(world_data, aes(x = long, y = lat, group = group, fill = log10(count))) +
+  geom_polygon(color = "gray70", size = 0.1) +
+  scale_fill_viridis_c(option = "magma", na.value = "white", direction=-1) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(x=NULL, y=NULL, fill = "log10\n# genomes")
+
+png("igj-world.png", width=600*sf, height=300*sf, res=72*sf)
+plot.world
 dev.off()
 
 rdf = df[df$country=="Australia", c(1, 3, 5)]
@@ -532,7 +584,6 @@ g.fig2.alt = ggarrange(global.plot,
                                                  edge.check.overlap = FALSE, edge.label.angle = "none",
                                                  no.times = TRUE),
                      nrow=2, ncol=2, labels=c("C", "D", "E", "F"))
-
 g.fig2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
                          coord_cartesian(clip = "off") + theme(
                            plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
@@ -545,6 +596,17 @@ g.fig2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hj
                          global.plot,
                          nrow=3, labels=c("D", "E", "F")), 
                        nrow=1, labels=c("C", ""), widths=c(1.5,2))
+
 png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
 g.fig2.alt
 dev.off()
+
+g.fig2.full = ggarrange(ggarrange(plot.world, upset.plot, nrow=1, labels=c("A", "B")),
+                        g.fig2.alt, nrow=2, heights=c(1,3))
+
+png("fig2-full.png", width=800*sf, height=1200*sf, res=72*sf)
+g.fig2.full
+dev.off()
+
+
+
