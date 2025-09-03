@@ -464,7 +464,7 @@ for(i in 1:nrow(dcs)) {
   
  ##########
   library(phytools)
-  country = "Tanzania"
+  country = "Romania"
   tree.path <- paste0("clean/",country,".nwk")
   if (!file.exists(tree.path)) {
     stop(paste("No newick-tree for", country, "in clean directory"))
@@ -496,7 +496,7 @@ for(i in 1:nrow(dcs)) {
 ctree.tmp = ctree
 colnames(ctree.tmp$data) = gsub("_acquired", "-a", colnames(ctree.tmp$data))
 colnames(ctree.tmp$data) = gsub("_mutations", "-m", colnames(ctree.tmp$data))
-res.tmp = country.list$Tanzania$seed.1
+res.tmp = country.list$Romania$seed.3
 res.tmp$bubbles$Name = gsub("_acquired", "-a", res.tmp$bubbles$Name)
 res.tmp$bubbles$Name = gsub("_mutations", "-m", res.tmp$bubbles$Name)
 res.tmp$featurenames = gsub("_acquired", "-a", res.tmp$featurenames)
@@ -601,12 +601,49 @@ png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
 g.fig2.alt
 dev.off()
 
-g.fig2.full = ggarrange(ggarrange(plot.world, upset.plot, nrow=1, labels=c("A", "B")),
-                        g.fig2.alt, nrow=2, heights=c(1,3))
+y.df = read.csv("date-data.csv")
+y2.df = y.df[y.df$isolation_year>2008,1:2]
+y2.df = rbind(y2.df, data.frame(isolation_year = "Pre-2008", count=sum(y.df$count[y.df$isolation_year>0 &
+                                                                                    y.df$isolation_year<2008])))
+y2.df = rbind(y2.df, data.frame(isolation_year = "NA", count=y.df$count[y.df$isolation_year==0 |
+                                                                          y.df$isolation_year=="No value"]))
+date.plot = ggplot(y2.df, aes(x=isolation_year, y=count)) + geom_col() + 
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(x="Isolation year", y="Count")
+png("igj-dates.png", width=400*sf, height=200*sf, res=72*sf)
+date.plot
+dev.off()
 
-png("fig2-full.png", width=800*sf, height=1200*sf, res=72*sf)
+g.fig2.full = ggarrange(ggarrange(ggarrange(plot.world, date.plot, labels=c("Ai", "ii"), nrow=2, heights=c(1.5,1)), upset.plot+ylab("\n\nCount")+
+                                    theme_combmatrix(combmatrix.panel.point.size = 1,
+                                                     combmatrix.panel.line.size  = 0.5) , nrow=1, labels=c("", "B")),
+                        g.fig2.alt, nrow=2, heights=c(1,2.25))
+
+png("fig2-full.png", width=700*sf, height=900*sf, res=72*sf)
 g.fig2.full
 dev.off()
 
+g.fig.alt.1 = ggarrange(ggarrange(plot.world, date.plot, labels=c("Ai", "ii"), nrow=2, heights=c(1.5,1)), upset.plot+ylab("\n\nCount")+
+                                    theme_combmatrix(combmatrix.panel.point.size = 1,
+                                                     combmatrix.panel.line.size  = 0.5) , nrow=1, labels=c("", "B"))
 
+png("fig-alt-1.png", width=700*sf, height=300*sf, res=72*sf)
+g.fig.alt.1
+dev.off()
 
+g.fig.alt.2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
+                         ),
+                       ggarrange(
+                         plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                         plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                     edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                     no.times = TRUE),
+                         global.plot,
+                         nrow=3, labels=c("B", "C", "D")), 
+                       nrow=1, labels=c("A", ""), widths=c(1.5,2))
+
+png("fig-alt-2.png", width=700*sf, height=600*sf, res=72*sf)
+g.fig.alt.2
+dev.off()
