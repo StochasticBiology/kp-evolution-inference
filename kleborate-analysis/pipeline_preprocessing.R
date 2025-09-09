@@ -2,7 +2,7 @@
 
 path <- "data-inference"  # replace with your folder path
 files <- list.files(path, pattern = "\\.R$", full.names = TRUE)
-sapply(files, source, local = TRUE)
+sapply(files, source)
 
 download.pathogen.watch()
 preprocess.kleborate(threshold=0)
