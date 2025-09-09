@@ -400,13 +400,13 @@ dev.off()
 
 #########
 
-load("data/glass_amc.Rdata")
+load("misc-data/glass_amc.Rdata")
 
 d.use <- df.wide %>%
   group_by(CountryTerritoryArea) %>%
   summarise(across(-c(Year), median, na.rm = TRUE), .groups = "drop")
 
-dcs = read.csv("drug-codes.csv")
+dcs = read.csv("misc-data/drug-codes.csv")
 plot.dc = data.frame()
 p.df = data.frame()
 ref = 1
@@ -601,7 +601,7 @@ png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
 g.fig2.alt
 dev.off()
 
-y.df = read.csv("date-data.csv")
+y.df = read.csv("misc-data/date-data.csv")
 y2.df = y.df[y.df$isolation_year>2008,1:2]
 y2.df = rbind(y2.df, data.frame(isolation_year = "Pre-2008", count=sum(y.df$count[y.df$isolation_year>0 &
                                                                                     y.df$isolation_year<2008])))
