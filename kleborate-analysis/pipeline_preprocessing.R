@@ -11,4 +11,4 @@ preprocess.metadata()
 prepare.all.lincoding.files()
 
 setwd("trees/")
-system("./make_trees.sh")
+system("chmod +x make_trees.sh; ./make_trees.sh")
