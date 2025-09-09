@@ -1,7 +1,7 @@
 library(ape)
 library(phangorn)
 library(parallel)
-source("hypertraps.R")
+library(hypertrapsct)
 
 # how much of a problem is reversibility?
 set.seed(1)
@@ -49,7 +49,6 @@ while(length(to.do) > 0) {
       ## (see first paragraph of section "Synthetic case studies")
       ref = which(x[[this.child]] == 0)[1]
       if(runif(1) < accumulation.rate*this.branch.length) { x[[this.child]][ref] = 1 } 
-      x.loss[[this.child]] = x[[this.child]]
       # in the reversible case, allow the leftmost feature ("first feature" in the ms.:
       # second paragraph of "Synthetic case studies") to revert with some probability
       if(FALSE) {
