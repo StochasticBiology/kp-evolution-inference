@@ -1,4 +1,6 @@
 # created 7 april 2025
+chmod +x *.sh
+
 ## do alignments of number138 directory with Kp reference
 ./align-batch.sh 138
 ## extract genuine Kp hits, fold in with old Olav data, and build script comparing pairwise everywhere 
