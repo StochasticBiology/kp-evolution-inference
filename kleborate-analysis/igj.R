@@ -41,7 +41,7 @@ igj.get.pca.df = function() {
              pca5=pca_result$x[,5])
 }
 
-region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
+region <- read.csv("misc-data/data-Ib27t.csv") # gbd superregion
 seed.1 <- list()
 summary.stats <- data.frame()
 all.bubbles = data.frame()
@@ -133,8 +133,8 @@ pca.df <- igj.get.pca.df()
 #  left_join(pca.df) -> summary.stats
 summary.stats = cbind(pca.df, summary.stats[1:100,])
 
-load("data/glass_amc.Rdata") # loads a data frame called df.wide
-region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
+load("misc-data/glass_amc.Rdata") # loads a data frame called df.wide
+region <- read.csv("misc-data/data-Ib27t.csv") # gbd superregion
 
 gbd.map = region %>%
   inner_join(summary.stats) %>%
