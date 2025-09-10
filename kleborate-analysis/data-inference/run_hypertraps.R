@@ -12,17 +12,10 @@
 run.hypertraps <- function(country = "Germany", 
                            my.seed = 1, 
                            run.length = 2,
-                           walkers = 200,
-                           hypertraps.path = "../hypertraps-ct/hypertraps.R") {
+                           walkers = 200) {
   
   if (!(require("Rcpp") &&
         require("ape"))) stop("Missing required dependencies Rcpp and ape")
-  
-  if (!file.exists(hypertraps.path)) {
-    stop(paste("No hypertraps at current path", hypertraps.path))
-  }
-  
-  source(hypertraps.path)
   
   tree.path <- paste0("clean/",country,".nwk")
   if (!file.exists(tree.path)) {
@@ -36,10 +29,10 @@ run.hypertraps <- function(country = "Germany",
   resistance.df <- read.csv("clean/kleborate-dichotomized.csv")
   featurenames <- setdiff(colnames(resistance.df), "id")
   
-  ctree <- curate.tree(tree.path, 
+  ctree <- hypertrapsct::curate.tree(tree.path, 
                        "clean/kleborate-dichotomized.csv")
   
-  model.fit <- HyperTraPS(ctree$dests, # set to one thousand walkers
+  model.fit <- hypertrapsct::HyperTraPS(ctree$dests, # set to one thousand walkers
                        initialstates=ctree$srcs,
                        length = run.length,
                        walkers = walkers,
