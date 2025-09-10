@@ -12,3 +12,6 @@ prepare.all.lincoding.files()
 
 setwd("trees/")
 system("chmod +x make_trees.sh; ./make_trees.sh")
+
+trees.df <- get.tree.metrics.df()
+save(trees.df, file="misc-data/tree_metrics.Rdata")
