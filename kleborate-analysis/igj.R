@@ -1,7 +1,10 @@
-devtools::load_all()
-library(tidyverse)
+path <- "data-inference"  # replace with your folder path
+files <- list.files(path, pattern = "\\.R$", full.names = TRUE)
+sapply(files, source)
 
-setwd("..")
+library(tidyverse)
+library(ggrepel)
+
 if (!exists("country.list")) {
   name <- load("all_models.Rdata")
   country.list <- get(name)
@@ -94,7 +97,7 @@ if(length(ref) > 0) {
 }
 all.bubbles = rbind(all.bubbles, bubbles)
 
-load("Zanzibar/zanzibar.Rdata")
+load("new-data/zanzibar.Rdata")
 bubbles <- model.zanzibar.1$bubbles
 seed.1 <- c(seed.1, list(bubbles))
 bubbles %>%
@@ -124,13 +127,9 @@ length(unique(all.bubbles$country[all.bubbles$Probability > 0.1]))
 length(unique(all.bubbles$country[all.bubbles$Probability > 0.0]))
 
 names(seed.1) <- names(country.list)
-#summary.stats$country <- names(country.list)
-
 
 pca.df <- igj.get.pca.df()
 
-#summary.stats %>%
-#  left_join(pca.df) -> summary.stats
 summary.stats = cbind(pca.df, summary.stats[1:100,])
 
 load("misc-data/glass_amc.Rdata") # loads a data frame called df.wide
