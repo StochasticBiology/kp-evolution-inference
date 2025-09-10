@@ -24,7 +24,7 @@ seeds <- c(1,2,3)
 load("misc-data/uninformativecountries.Rdata")
 runs <- expand.grid(uninformative.countries$country, seeds)
 colnames(runs) <- c("country", "seed")
-load("data/tree_metrics.Rdata")
+load("misc-data/tree_metrics.Rdata")
 runs <- dplyr::left_join(runs, trees.df, keep=FALSE)
 
 # Run models from smallest to largest transition set, dividing them evenly among
