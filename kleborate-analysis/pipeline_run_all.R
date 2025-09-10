@@ -1,12 +1,16 @@
 # Before running this all files and newicks must be prepared. I.e run 
 # "Rscript pipeline_preprocessing.R" and "bash make_trees.sh" in exec-folder.
 
+library(hypertrapsct)
+
 args <- commandArgs(trailing=TRUE)
 
 if (length(args) != 1)
   stop("USAGE: Rscript pipeline_run_all.R [cluster_id]")
 
-devtools::load_all()
+path <- "data-inference"  # replace with your folder path
+files <- list.files(path, pattern = "\\.R$", full.names = TRUE)
+sapply(files, source)
 
 length = 6
 walkers = 1000
@@ -62,4 +66,3 @@ sink(file = paste0("logfile-",cluster_id,".txt"),
      append = TRUE)
 print(paste(Sys.time(), "DONE", runs[i, "n_transitions"]))
 sink()
- 
