@@ -2,7 +2,7 @@
 
 Global comparative study of *Klebsiella pneumoniae* evolution
 
-<img width="1282" height="838" alt="image" src="https://github.com/user-attachments/assets/c01b7130-6efd-418a-8724-98f657addc06" />
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/c01b7130-6efd-418a-8724-98f657addc06" />
 
 ## Dependencies
 
@@ -11,6 +11,10 @@ Requires R with `hypertrapsct` https://github.com/StochasticBiology/hypertrapsct
 We also use `LINcoding.py` by Melanie Hennart, which requires Python with `numpy` (and common libraries copy, argparse, itertools, random, re)
 
 The genome assembly needs RagTag https://github.com/malonge/RagTag and Mummer e.g. `brew install mummer`
+
+# General pipeline illustration
+
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/6b6840c4-9a5f-4c4c-8a92-751b4e382ded" />
 
 # Inference using Kleborate data 
 
