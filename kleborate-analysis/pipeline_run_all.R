@@ -21,7 +21,7 @@ n_clusters = 8
 # Create parameters and metadata for all runs
 countries <- gsub("\\.nwk", "", list.files("clean", pattern=".*\\.nwk"))
 seeds <- c(1,2,3)
-load("uninformativecountries.Rdata")
+load("misc-data/uninformativecountries.Rdata")
 runs <- expand.grid(uninformative.countries$country, seeds)
 colnames(runs) <- c("country", "seed")
 load("data/tree_metrics.Rdata")
