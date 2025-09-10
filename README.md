@@ -10,8 +10,7 @@ We also use `LINcoding.py` by Melanie Hennart, which requires Python with `numpy
 
 The genome assembly needs RagTag https://github.com/malonge/RagTag and Mummer e.g. `brew install mummer`
 
-Inference using Kleborate data 
-----
+# Inference using Kleborate data 
 
 In `kleborate-analysis/`.
 
@@ -28,8 +27,7 @@ Rscript script/pipeline_run_all.R 1
 
 When everything is finished, `pipeline_plot_all.R` amalgamates and plots summaries of the data; `igj.R` and plotted with `igj-followup.R` take these outputs forward, forming the first few figures in the manuscript.
 
-Analysis of new genome data 
------
+# Analysis of new genome data 
 
 In `new-genomes/`.
 
@@ -39,8 +37,7 @@ In `new-genomes/`.
 * `process-ANI-all.R` does the tree building, new transition pulling, inference and prediction assays for this, and produces paper figures
 * `run-new-genomes.sh` wraps and illustrates the pipeline
 
-Reversibility control study 
------
+# Reversibility control study 
 
 In `reversibility-control/`.
 
