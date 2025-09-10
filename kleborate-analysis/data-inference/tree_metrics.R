@@ -36,14 +36,13 @@ tree.metrics <- function(c.tree) {
 #' @return A data frame containing tree metrics for all newick trees
 #' @export
 get.tree.metrics.df <- function() {
-  source("../hypertraps-ct/hypertraps.R")
   kleborate.df <- read.csv("clean/kleborate-dichotomized.csv")
   metrics.df <- data.frame(matrix(ncol = length(colnames(kleborate.df)) + 1, 
                                   nrow = 0))
   
   for (file in list.files("clean", pattern = "*\\.nwk")) {
     print(paste("parsing", file))
-    c.tree <- curate.tree(paste0("clean/",file), 
+    c.tree <- hypertrapsct::curate.tree(paste0("clean/",file), 
                           "clean/kleborate-dichotomized.csv")
     metrics <- tree.metrics(c.tree)
     data.row <- c(gsub("(*)\\.nwk","\\1",file), 
