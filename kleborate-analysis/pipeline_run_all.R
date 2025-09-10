@@ -29,6 +29,7 @@ runs <- dplyr::left_join(runs, trees.df, keep=FALSE)
 
 # Run models from smallest to largest transition set, dividing them evenly among
 # the cores.
+dir.create("models/")
 dir.create("models/length6-0L")
 for (i in order(runs$n_transitions, runs$seed)) {
   # Check if this thread should run model
