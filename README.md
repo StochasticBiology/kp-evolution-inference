@@ -2,6 +2,8 @@
 
 Global comparative study of *Klebsiella pneumoniae* evolution
 
+<img width="1282" height="838" alt="image" src="https://github.com/user-attachments/assets/c01b7130-6efd-418a-8724-98f657addc06" />
+
 ## Dependencies
 
 Requires R with `hypertrapsct` https://github.com/StochasticBiology/hypertrapsct and a collection of other libraries (automatically generated list): `dplyr`, `ggplot2`, `ggpubr`, `wordcloud`, `lme4`, `phytools`, `countrycode`, `ggbeeswarm`, `ggrepel`, `ggupset`, `tidyr`, `tidyverse`
