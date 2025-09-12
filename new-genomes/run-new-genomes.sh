@@ -1,5 +1,10 @@
-# created 7 april 2025
+# updated 12 sep 2025
 chmod +x *.sh
+
+# unpack new genome FASTA files
+cd number138
+tar -xzf new-genomes.tar.gz
+cd ..
 
 ## do alignments of number138 directory with Kp reference
 ./align-batch.sh 138
