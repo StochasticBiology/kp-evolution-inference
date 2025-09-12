@@ -1,3 +1,5 @@
+## first, get new-kp-genomes.tar.gz from https://osf.io/36r45
+
 # updated 12 sep 2025
 chmod +x *.sh
 
