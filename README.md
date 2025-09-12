@@ -37,6 +37,8 @@ When everything is finished, `pipeline_plot_all.R` amalgamates and plots summari
 
 # Analysis of new genome data 
 
+First, retrieve `new-kp-genomes.tar.gz` from https://osf.io/36r45 .
+
 In `new-genomes/`.
 
 * `align-batch.sh` aligns a collection of new isolates against the Klebsiella reference genome (plus lots of redundant stuff)
