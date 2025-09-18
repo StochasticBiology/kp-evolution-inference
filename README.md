@@ -12,7 +12,7 @@ Requires R with `hypertrapsct` https://github.com/StochasticBiology/hypertrapsct
 
 We also use `LINcoding.py` by Melanie Hennart, which requires Python with `numpy` (and common libraries copy, argparse, itertools, random, re)
 
-The genome assembly needs RagTag https://github.com/malonge/RagTag and Mummer e.g. `brew install mummer`
+The genome assembly needs RagTag https://github.com/malonge/RagTag and Mummer e.g. `brew install mummer`. Processing genomes requires Kleborate https://github.com/klebgenomics/Kleborate .
 
 # General pipeline illustration
 
