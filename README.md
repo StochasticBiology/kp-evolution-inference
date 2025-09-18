@@ -39,7 +39,7 @@ When everything is finished, `pipeline_plot_all.R` amalgamates and plots summari
 
 In `new-genomes/`.
 
-❗ _Manual steps required._ First, retrieve `new-kp-genomes.tar.gz` from https://osf.io/36r45 .  Unpack all the outputs into the `number138/` folder. Next, download Klebsiella genomes from Tanzania in FASTA format from here https://pathogen.watch/genomes/all?country=tz&genusId=570 . Unpack into `From_Olav_fixed/`. There, run
+❗ _Manual steps required._ First, retrieve `new-kp-genomes.tar.gz` from https://osf.io/36r45 .  Unpack all the outputs into the `number138/` folder. Next, download Klebsiella genomes from Tanzania in FASTA format from here https://pathogen.watch/genomes/all?country=tz&genusId=570 . Unpack into `From_Olav_fixed/`. To pull AMR features in both cases, run
 
 ```
 kleborate -a *.fasta -o kleborate_results -p kpsc --trim_headers
