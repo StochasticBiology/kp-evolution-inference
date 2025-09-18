@@ -39,7 +39,13 @@ When everything is finished, `pipeline_plot_all.R` amalgamates and plots summari
 
 In `new-genomes/`.
 
-❗ _Manual steps required._ First, retrieve `new-kp-genomes.tar.gz` from https://osf.io/36r45 .  Unpack all the outputs into the `number138/` folder. Next, download Klebsiella genomes from Tanzania in FASTA format from here https://pathogen.watch/genomes/all?country=tz&genusId=570 . Unpack into `From_Olav_fixed/`. 
+❗ _Manual steps required._ First, retrieve `new-kp-genomes.tar.gz` from https://osf.io/36r45 .  Unpack all the outputs into the `number138/` folder. Next, download Klebsiella genomes from Tanzania in FASTA format from here https://pathogen.watch/genomes/all?country=tz&genusId=570 . Unpack into `From_Olav_fixed/`. There, run
+
+```
+kleborate -a *.fasta -o kleborate_results -p kpsc --trim_headers
+```
+
+to extract AMR information from these genomes. 
 
 * `align-batch.sh` aligns a collection of new isolates against the Klebsiella reference genome (plus lots of redundant stuff)
 * `process-pairs.sh` checks which new isolates look like genuine Klebsiella and does pairwise `dnadiff` comparisons across these to extract ANI-like scores. Then pulls Olav's existing Tanzanian samples and creates (and splits) a script doing all-by-all `dnadiff` comparisons across old and new
