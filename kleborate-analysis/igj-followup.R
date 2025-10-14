@@ -7,16 +7,33 @@ library(countrycode)
 library(hypertrapsct)
 library(tidyr)
 library(dplyr)
+library(viridisLite)
+library(phytools)
 
-source("hypertraps-wip.R")
+# read in results of inference
 if (!exists("country.list")) {
   name <- load("all_models.Rdata")
   country.list <- get(name)
 }
+# scaling factor for graphics
+sf = 2
 
+# broad contents
+# TASK 1 -- preprocessing and curating
+# TASK 2 -- PCA plots of summarised "bubble plot" dynamics (Fig 2B)
+# TASK 3 -- bubble plots corresponding to PCA extremes (Fig 2C)
+# TASK 4 -- individual features and PCA behaviour (Fig 3)
+# TASK 5 -- geographical regions and PCA stats (Fig 4A-C)
+# TASK 6 -- drug use data and acquisition (Fig 4D)
+# TASK 7 -- summary global data (Fig 1A-B, Fig 2A)
+# TASK 8 -- case study plot (Fig 1C)
+
+############### TASK 1 -- preprocessing and curating
+
+# read in prepared collection of bubble plots, and process
 df = read.csv("igj-all-bubbles.csv", sep=";", stringsAsFactors = FALSE)
 df = df[df$country != "USA2" & df$country != "USA3",]
-region <- read.csv("raw/data-Ib27t.csv") # gbd superregion
+region <- read.csv("misc-data/data-Ib27t.csv") # gbd superregion
 region$oldval = region$val
 region$val = gsub("Central Europe, Eastern Europe, and Central Asia", "CEEECA", region$val)
 region$val = gsub("High-income", "HI", region$val)
@@ -26,19 +43,16 @@ region$val = gsub("South Asia", "SA", region$val)
 region$val = gsub("Southeast Asia, East Asia, and Oceania", "SEEAO", region$val)
 region$val = gsub("Sub-Saharan Africa", "SSAf", region$val)
 
-ggplot(df, aes(x=Time, y=Probability, group=country, color=factor(region))) +
-  geom_line() + facet_wrap(~OriginalIndex) + scale_y_log10() + geom_hline(aes(yintercept=1/20)) +
-  theme(legend.position = "none") +
-  scale_color_viridis_d(option="magma")
-
+# process feature names, abbreviating
 tmp = df[1:22,]
 feature.names = tmp$Name[order(tmp$OriginalIndex)]
 feature.names = gsub("_acquired", "-a", feature.names)
 feature.names = gsub("_mutations", "-m", feature.names)
 
-
+# list of countries
 countries <- unique(df$country)
 
+# pull the bubble plots into a wide format
 wide_df <- df %>%
   mutate(ProbTime = Probability * Time) %>%
   group_by(country, OriginalIndex) %>%
@@ -46,14 +60,7 @@ wide_df <- df %>%
             .groups = "drop") %>%
   pivot_wider(names_from = OriginalIndex, values_from = SumProbTime)
 
-wide_df2 <- df %>%
-  mutate(Prob2Time = Probability * Time * Time, ProbTime = Probability * Time) %>%
-  group_by(country, OriginalIndex) %>%
-  summarise(SumProbTime = sum(ProbTime, na.rm = TRUE), 
-            SD = sqrt(sum(Prob2Time, na.rm = TRUE) - sum(ProbTime, na.rm = TRUE)**2), 
-            .groups = "drop") %>%
-  pivot_wider(names_from = OriginalIndex, values_from = c(SumProbTime, SD))
-
+# build dataframe of country name conversions
 gbd.map = data.frame(country=NULL, val=NULL)
 gbd.map <- rbind(gbd.map, c("Burkina Faso","Burkina_Faso"))
 gbd.map <- rbind(gbd.map, c("Czech Republic","Czech_Republic"))
@@ -74,10 +81,10 @@ gbd.map <- rbind(gbd.map, c("R. B. de Venezuela","Venezuela"))
 gbd.map <- rbind(gbd.map, c("United Kingdom","United_Kingdom"))
 gbd.map <- rbind(gbd.map, c("United States of America", "USA"))
 
+# assign GBD regions
 region = rbind(region, data.frame(country="Hong Kong", val="SEEAO", oldval="Southeast Asia, East Asia, and Oceania"))
 region = rbind(region, data.frame(country="Guadeloupe", val="LAC", oldval="Latin America and Caribbean"))
 region = rbind(region, data.frame(country="Zanzibar", val="SSAf", oldval="Sub-Saharan Africa"))
-
 for(i in 1:nrow(region)) {
   ref = which(gbd.map[,1] == region$country[i])
   if(length(ref) > 0) {
@@ -85,6 +92,7 @@ for(i in 1:nrow(region)) {
   }
 }
 
+# pull regions into dataframe
 wide_df$region = ""
 for(i in 1:nrow(wide_df)) {
   ref = which(region$country == wide_df$country[i])
@@ -93,24 +101,27 @@ for(i in 1:nrow(wide_df)) {
   }
 }
 
+# pull country codes into dataframe
 wide_df$ccode = countrycode(wide_df$country, origin="country.name", destination = "iso3c")
 wide_df$ccode[wide_df$country == "Zanzibar"] = "TZA*"
 
-# Convert to matrix (optional)
 probtime_matrix <- as.matrix(wide_df[,-c(1, (ncol(wide_df))-0:1)])  # Remove 'country' column
 rownames(probtime_matrix) <- wide_df$country
 
+############### TASK 2 -- PCA plots of summarised "bubble plot" dynamics
+
+# do the PCA
 pca_result <- prcomp(probtime_matrix, scale. = TRUE)
 pve <- (pca_result$sdev)^2 / sum(pca_result$sdev^2) * 100
 
+# set up a dataframe storing PCA results
 pca.df = data.frame(country=rownames(probtime_matrix),
                     region="",
-           pca1=pca_result$x[,1], 
-           pca2=pca_result$x[,2], 
-           pca3=pca_result$x[,3], 
-           pca4=pca_result$x[,4], 
-           pca5=pca_result$x[,5])
-
+                    pca1=pca_result$x[,1], 
+                    pca2=pca_result$x[,2], 
+                    pca3=pca_result$x[,3], 
+                    pca4=pca_result$x[,4], 
+                    pca5=pca_result$x[,5])
 pca.df$ccode = countrycode(pca.df$country, origin="country.name", destination = "iso3c")
 for(i in 1:nrow(pca.df)) {
   ref = which(region$country == pca.df$country[i])
@@ -119,90 +130,94 @@ for(i in 1:nrow(pca.df)) {
   }
 }
 
-g.pca = ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=country, fill=region)) + 
-  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75)   + labs(x="PCA1", y="PCA2")
+# start producing the graphics
+# useful colour scheme for the ellipses
+pca.cols = viridis(7, option = "magma")
+pca.cols[7] = "#FF0000"
+pca.cols[1] = "#888888"
 
-#g.pca = ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=ccode, fill=region)) + 
-#  geom_point() + geom_text_repel(max.overlaps = 40) 
+# PCA1 vs PCA2 plot, plus ellipses 
+g.pca1.alt =  ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=country, fill=region)) + 
+  geom_point(size = 1, alpha = 0.9, shape = 21, stroke = 0.5) +
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca1, y=pca2, label=country, fill=region), size=2, pch = 21, color="black") +
+  stat_ellipse(level = 0.95, alpha = 0.5, linewidth = 1.2) +
+  geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.5, segment.alpha = 0.3)   + 
+  labs(x="PCA1", y="PCA2", fill = "GBD Region", color = "GBD Region") +
+  scale_color_manual(values = pca.cols) + scale_fill_manual(values = pca.cols) +
+  theme_minimal()
+g.pca1.alt
 
-g.pca.ellipse = g.pca + stat_ellipse(
-  geom = "path",
-  linewidth=1.5,
-  alpha = 0.25      # transparency
-  #color = NA        # optional: remove ellipse borders
-)  +  theme_minimal()+ theme(legend.position = "bottom") +
-  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca1, y=pca2, label=country, fill=region), pch = 21, color="black")
+# PCA2 vs PCA3 plot, plus ellipses 
+g.pca2.alt =  ggplot(pca.df, aes(x=pca3, y=pca2, color=region, label=country, fill=region)) + 
+  geom_point(size = 1, alpha = 0.9, shape = 21, stroke = 0.5) +
+  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca1, y=pca2, label=country, fill=region), size=2, pch = 21, color="black") +
+  stat_ellipse(level = 0.95, alpha = 0.5, linewidth = 1.2) +
+  geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.5, segment.alpha = 0.3)   + 
+  labs(x="PCA3", y="PCA2", fill = "GBD Region", color = "GBD Region") +
+  scale_color_manual(values = pca.cols) + scale_fill_manual(values = pca.cols) +
+  theme_minimal()
+g.pca2.alt
 
-g.pca2 = ggplot(pca.df, aes(x=pca3, y=pca2, color=region, label=country, fill=region)) + 
-  geom_point() + geom_text_repel(size=2.5, max.overlaps = 20, alpha=0.75) + theme_minimal()  + labs(x="PCA3", y="PCA2")
-
-g.pca2.ellipse = g.pca2 + stat_ellipse(
-  geom = "path",
-  linewidth=1.5,
-  alpha = 0.25      # transparency
- # color = NA        # optional: remove ellipse borders
-) + theme(legend.position = "bottom")+
-  geom_point(data=pca.df[pca.df$country=="Zanzibar",], aes(x=pca3, y=pca2, label=country, fill=region), pch = 21, color="black")
-
-
-pca.df$country == wide_df$country
+png("pca-alts.png", width=400*sf, height=600*sf, res=72*sf)
+ggarrange(g.pca1.alt + theme(legend.position="none"), g.pca2.alt + theme(legend.position="bottom"), heights=c(1,1.3), nrow=2)
+dev.off()
 
 all.df = cbind(wide_df, pca.df[,2:ncol(pca.df)])
 
+############### TASK 3 -- bubble plots corresponding to PCA extremes
 
-######
-
-bubble.plot = function(cnames) {
-  ggplot(df[df$country %in% cnames,], aes(x=Time, y=Name, size=Probability, color=country)) + 
-    geom_point(alpha=0.5) +
-  theme_minimal()
+# function for bubble plot for a particular country
+b.plot = function(country, y.ticks="left") {
+  sub = df[df$country == country,]
+  sub$Name = gsub("_mutations", "-m", sub$Name)
+  sub$Name = gsub("_acquired", "-a", sub$Name)
+  ggplot(sub[sub$Probability > 1/22,], aes(x=Time, y=Name, size=Probability, color=Time)) + 
+    geom_point(shape=16) + theme_minimal() + theme(legend.position = "none") +
+    scale_colour_gradientn(
+      colours = c("darkblue", "blue", "red", "darkred"),
+      values = scales::rescale(c(0, 7, 14, 21))
+    ) + labs(y=NULL, x="Ordinal Time") +
+    scale_y_discrete(position=y.ticks)
 }
 
-bubble.plot(c("Venezuela", "Nigeria"))
-bubble.plot(c("Senegal", "Argentina"))
-
-g.pca.ex.1 = plotHypercube.bubbles.compare(list(country.list$Venezuela$seed.1, country.list$Nigeria$seed.1 ), 
-                                           expt.names = c("Venezuela", "Nigeria"), sqrt.trans=TRUE,
-                                           fill.name = "Country") +
-  scale_y_continuous(breaks = 0:21, labels=feature.names) + 
-  scale_fill_manual(values=c("#FF000088", "#0000FF88"))
-
-plotHypercube.bubbles.compare(list(country.list$Cameroon$seed.1, country.list$Kenya$seed.1 ), sqrt.trans=TRUE)
-g.pca.ex.2 = plotHypercube.bubbles.compare(list(country.list$Senegal$seed.1, country.list$Argentina$seed.1 ), 
-                                           expt.names = c("Senegal", "Argentina"), sqrt.trans=TRUE, 
-                                           fill.name = "Country") +
-  scale_y_continuous(breaks = 0:21, labels=feature.names) + 
-  scale_fill_manual(values=c("#FF000088", "#0000FF88"))
-
-plotHypercube.bubbles.compare(list(country.list$Austria$seed.1, country.list$Myanmar$seed.1 ), sqrt.trans=TRUE)
-
-
-my.ann = function(y) {
-  return( annotate("rect",
-                   xmin = -1, xmax = 22,     # x-range of the box
-                   ymin = y-0.5, ymax = y+0.5,     # y-range of the box
-                   color = "black",
-                   fill=NA,
-                   alpha = 0.5             # transparency
-  ))
+# function to highlight particular rows in a bubble plot
+highlight_layer = function(p, yvals, alpha=0.35) {
+  highlight_data = data.frame(
+    ymin = yvals-0.5,  # start of the highlighted y-ranges
+    ymax = yvals+0.5   # end of the highlighted y-ranges
+  )
+  hlayer = geom_rect(
+    data = highlight_data,
+    aes(ymin = ymin, ymax = ymax),
+    xmin = -Inf, xmax = Inf,
+    fill = "yellow",
+    alpha = alpha,
+    inherit.aes = FALSE
+  )
+  p$layers <- c(list(hlayer), p$layers)
+  return(p)
 }
 
-g.pca.part.1 = ggarrange(
-  ggarrange(g.pca.ellipse, g.pca2.ellipse, nrow=2, labels=c("A", "B")),
-  ggarrange(g.pca.ex.1, g.pca.ex.2  + my.ann(21) + my.ann(16) + my.ann(9) +my.ann(19) , nrow=2, labels=c("C", "D")),
-  nrow=1
-)
+# create bubble plots for the particular countries of interest
+bplot.1 = b.plot("Venezuela")+xlab(NULL)
+bplot.2 = b.plot("Nigeria", y.ticks="right")+xlab(NULL)
+bplot.3 = b.plot("South_Korea")+xlab(NULL)
+bplot.4 = b.plot("Gambia", y.ticks="right")+xlab(NULL)
 
-sf = 2
-png("pca-igj.png", width=800*sf, height=600*sf, res=72*sf)
-g.pca.part.1
+# combine into a plot object
+b.plots = ggarrange(bplot.1 + xlab("Venezuela\n(low PCA1)"), ggplot()+theme_void(), 
+                    bplot.2 + xlab("Nigeria\n(high PCA1)"), 
+                    highlight_layer(bplot.3, c(2, 12, 15, 20), alpha=0.5) + xlab("South Korea\n(low PCA2)"), ggplot()+theme_void(),
+                    highlight_layer(bplot.4, c(2, 12, 15, 20), alpha=0.5) + xlab("Gambia\n(high PCA2)"), ncol=3, nrow = 2, widths=c(1,0.2,1))
+
+# produce plots
+png("bplots.png", width=500*sf, height=500*sf, res=72*sf)
+b.plots
 dev.off()
 
-g.pca.part.1
+############### TASK 4 -- individual features and PCA behaviour
 
-ggplot(df[df$country=="Venezuela",], aes(x=Time, y=Name, size=Probability)) + geom_point()
-ggplot(df[df$country=="Venezuela",], aes(x=Time, y=Name, size=Probability)) + geom_point()
-
+# create dataframe with variables and PCA values
 long_df <- all.df %>%
   pivot_longer(
     cols = -c("country", "ccode", "region", "pca1", "pca2", "pca3", "pca4", "pca5"),                     # all columns except 'country'
@@ -212,41 +227,12 @@ long_df <- all.df %>%
 long.df = as.data.frame(long_df)
 long.df$Variable = as.numeric(long.df$Variable)
 long.df$name = feature.names[long.df$Variable+1]
-ggarrange(
-ggplot(long.df, aes(x=name, y=Value, color=pca1)) + 
-  geom_beeswarm() + scale_color_viridis_b(option="magma") +
-  theme(axis.text.x = element_text(angle=45,hjust=1)),
-ggplot(long.df, aes(x=name, y=Value, color=pca2)) + 
-  geom_beeswarm() + scale_color_viridis_b(option="magma") +
-  theme(axis.text.x = element_text(angle=45,hjust=1)),
-ggplot(long.df, aes(x=name, y=Value, color=pca3)) + 
-  geom_beeswarm() + scale_color_viridis_b(option="magma") +
-  theme(axis.text.x = element_text(angle=45,hjust=1)),
-nrow=3
-)
 
-ggplot(long.df, aes(x = Value, y=pca1)) + geom_point() + facet_wrap(~name)
-ggplot(long.df, aes(x = Value, y=pca2)) + geom_point() + facet_wrap(~name)
-ggplot(long.df, aes(x = Value, y=pca3)) + geom_point() + facet_wrap(~name)
-ggplot(long.df, aes(x = Value, y=pca4)) + geom_point() + facet_wrap(~name)
-ggplot(long.df, aes(x = abs(Value-11), y=pca1)) + geom_point() + facet_wrap(~Variable)
-
-pca.corrs = ggplot(long.df) +
-  geom_point(aes(x=Value,y=pca1), size=0.5, color="grey") + 
-  geom_smooth(aes(x=Value,y=pca1), method="lm", color="#444444") +
-  geom_point(aes(x=Value,y=pca2-10), size=0.5, color="#FF8888") +
-  geom_smooth(aes(x=Value,y=pca2-10), method="lm", color="#AA4444") +
-  geom_point(aes(x=Value,y=pca3-20), size=0.5, color="#8888FF") +
-  geom_smooth(aes(x=Value,y=pca3-20), method="lm", color="#6666AA") +
-  geom_vline(xintercept=11) +
-  facet_wrap(~name) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
-  
-
-long.sub = long.df[long.df$Variable %in% c(16, 18, 20, 3, 5, 6, 7, 9),]
-
+# subset particular features
 set.1 = c(16, 9, 5, 21, 19)
 set.2 = c(18, 3, 7)
 
+# produce plots for these subsets: plot relationships between PCAs and expected orderings
 pca.corrs.s1 = ggplot(long.df[!(long.df$Variable %in% c(set.1,set.2)),]) +
   geom_point(aes(x=Value,y=pca1), size=0.5, color="#BBBBBB") + 
   geom_smooth(aes(x=Value,y=pca1), method="lm", color="#444444") +
@@ -274,40 +260,22 @@ pca.corrs.s3 = ggplot(long.df[(long.df$Variable %in% c(set.2)),]) +
   geom_smooth(aes(x=Value,y=pca3-20), method="lm", color="#6666AA") +
   geom_vline(xintercept=11) +
   facet_wrap(~name, nrow=1) + theme_minimal() + labs(x="Expected acquisition ordering", y="PCA projection (shifted)")
+
+# pull together into a big figure
 pca.corrs3.alt = ggarrange(pca.corrs.s1, 
-          ggarrange(pca.corrs.s2, pca.corrs.s3, nrow=1, labels=c("B", "C")), 
-          nrow=2, labels=c("A", ""))
+                           ggarrange(pca.corrs.s2, pca.corrs.s3, nrow=1, labels=c("B", "C")), 
+                           nrow=2, labels=c("A", ""))
 
 
 long.df$Variable = as.numeric(long.df$Variable)
-g.pca.part.2 = ggarrange(
- ggplot(long.df[!(long.df$Variable %in% c(set.1, set.2)), ], aes(x=name, y=Value, color=pca1)) + 
-   #ggplot(long.df, aes(x=name, y=Value, color=pca1)) + 
-    geom_beeswarm(size=1) + scale_color_viridis_b(option="magma") + 
-    geom_hline(yintercept = 11) +
-    scale_x_discrete(limits=feature.names) + 
-    theme_minimal() +
-    labs(x = "", y = "PCA1") +
-    theme(axis.text.x = element_text(angle=45,hjust=1), legend.position="none"),
-  ggplot(long.df[long.df$Variable %in% set.1,], aes(x=name, y=Value, color=pca2)) + 
-    geom_beeswarm(size=1) + scale_color_viridis_b(option="magma") + 
-    geom_hline(yintercept = 11) +
-    theme_minimal() +
-    labs(x = "", y = "PCA2") +
-    scale_x_discrete(limits=feature.names) + theme(axis.text.x = element_text(angle=45,hjust=1), legend.position="none"),
-  ggplot(long.df[long.df$Variable %in% set.2,], aes(x=name, y=Value, color=pca3)) + 
-    geom_beeswarm(size=1) + scale_color_viridis_b(option="magma") + 
-    geom_hline(yintercept = 11) +
-    theme_minimal() +
-    labs(x = "", y = "PCA3") +
-    scale_x_discrete(limits=feature.names) + theme(axis.text.x = element_text(angle=45,hjust=1), legend.position="none"),
-  nrow=3, heights=c(1.5,1,1)
-)
 
+# scaling function for alternative, beeswarm PCA correlate plot
 my.scale = function(x) {
   return(x)
   return((x-mean(x))/sd(x))
 }
+
+# set up dataframe for beeswarm plot
 plot.long.df = long.df
 plot.long.df$set = 1
 plot.long.df$col[!(plot.long.df$Variable %in% c(set.1, set.2))] = my.scale(plot.long.df$pca1[!(plot.long.df$Variable %in% c(set.1, set.2))])
@@ -316,6 +284,7 @@ plot.long.df$col[plot.long.df$Variable %in% set.1] = my.scale(plot.long.df$pca2[
 plot.long.df$set[plot.long.df$Variable %in% set.2] = 3
 plot.long.df$col[plot.long.df$Variable %in% set.2] = my.scale(plot.long.df$pca3[plot.long.df$Variable %in% set.2])
 
+# beeswarm plot
 pca.corrs.alt = ggplot(plot.long.df, aes(x=name, y=Value-22*(set-1), color=col)) + 
   geom_beeswarm(size=0.5,cex=0.5,priority="density") + scale_color_viridis_c(option="magma") + 
   geom_hline(yintercept = 11) + geom_hline(yintercept = 11-22) + geom_hline(yintercept = 11-44) +
@@ -329,18 +298,6 @@ pca.corrs.alt = ggplot(plot.long.df, aes(x=name, y=Value-22*(set-1), color=col))
   annotate("text", x = 1, y = 20-22, label = "PCA2") +
   annotate("text", x = 1, y = 20-44, label = "PCA3") 
 
-
-
-
-
-png("pca-ids.png", width=500*sf, height=500*sf, res=72*sf)
-g.pca.part.2
-dev.off()
-
-png("pca-corrs.png", width=600*sf, height=400*sf, res=72*sf)
-pca.corrs
-dev.off()
-
 png("pca-corrs-alt.png", width=600*sf, height=400*sf, res=72*sf)
 pca.corrs.alt
 dev.off()
@@ -349,19 +306,7 @@ png("pca-corrs3-alt.png", width=600*sf, height=400*sf, res=72*sf)
 pca.corrs3.alt
 dev.off()
 
-ggplot(long.sub, aes(x = Value, y=pca1)) + geom_point() + facet_wrap(~Variable)
-ggplot(long.sub, aes(x = Value, y=pca2)) + geom_point() + facet_wrap(~Variable) # 16, 9, 5
-ggplot(long.sub, aes(x = Value, y=pca3)) + geom_point() + facet_wrap(~Variable) # 18, 3, 7
-
-ggarrange(
-ggplot(long.df[long.df$Variable == 1,], aes(x=region, y=pca1, color=region, label=country)) +
-  geom_boxplot() + geom_text_repel(),
-ggplot(long.df[long.df$Variable == 1,], aes(x=region, y=pca2, color=region, label=country)) +
-  geom_boxplot() + geom_text_repel(),
-ggplot(long.df[long.df$Variable == 1,], aes(x=region, y=pca3, color=region, label=country)) +
-  geom_boxplot() + geom_text_repel(),
-nrow=3
-)
+############### TASK 5 -- geographical regions and PCA stats
 
 g.region.2 = ggplot(long.df[long.df$Variable == 1,], aes(x=region, y=pca2, fill=region, label=ccode)) +
   geom_boxplot(width=0.5) + geom_point() + geom_text_repel(size=2) + 
@@ -392,138 +337,104 @@ g.region.indz = g.region.ind +
              aes(x=factor(name, levels=feature.names[c(set.1,set.2)+1]), y=Value, fill=region, label=ccode), 
              pch=21, size=3, position=position_nudge(x = 0.33))
 
-png("pca-orders.png", width=500*sf, height=400*sf, res=72*sf)
-ggarrange(ggarrange(g.region.2z, g.region.3z, nrow=1, labels=c("A", "B")), g.region.indz, nrow=2, labels=c("", "C"))
-#ggarrange(g.region.2, g.region.3, g.region.ind, nrow=3)
-dev.off()
+############### TASK 6 -- drug use data and acquisition
 
-
-#########
-
+# load GLASS data
 load("misc-data/glass_amc.Rdata")
 
+# create drug use dataframe
 d.use <- df.wide %>%
   group_by(CountryTerritoryArea) %>%
   summarise(across(-c(Year), median, na.rm = TRUE), .groups = "drop")
 
+# pull drug codes
 dcs = read.csv("misc-data/drug-codes.csv")
 plot.dc = data.frame()
 p.df = data.frame()
 ref = 1
 
+# relabel to produce readable annotations
 row_strings <- paste0(dcs[,1], " (", dcs[,2], ")")
 final_string <- paste(row_strings, collapse = "; ")
 cat(gsub("-a", "", final_string))
 
+# transformation function
 myt = function(x) {
   return(sqrt(x))
 }
 
+# go through list of drugs, calculating linear model statistics and producing plot
 for(i in 1:nrow(dcs)) {
   if(dcs$Relevant_ATC_Codes[i] %in% colnames(d.use)) {
-  d.use.tmp = d.use[c("CountryTerritoryArea", dcs$Relevant_ATC_Codes[i])]
-  colnames(d.use.tmp)[1] = "country"
-  h.out.tmp = long.df[long.df$name == dcs$Resistance_Code[i], c("country", "region", "ccode", "name", "Value")]
-  plot.dc.tmp = merge(d.use.tmp, h.out.tmp, by="country")
-  colnames(plot.dc.tmp)[2] = "drug.use"
-  plot.dc.tmp$drug.label = paste0(dcs$Relevant_ATC_Codes[i], "/", dcs$Resistance_Code[i], collapse="")
-  my.lm = lm(plot.dc.tmp$Value ~ myt(plot.dc.tmp$drug.use))
-  pval = round(summary(my.lm)$coefficients[2,4], digits=3)
-  plot.dc = rbind(plot.dc, plot.dc.tmp)
-  p.df = rbind(p.df, data.frame(p = paste0("p=",pval,collapse=""), drug.label =paste0(dcs$Relevant_ATC_Codes[i], "/", dcs$Resistance_Code[i], collapse=""), 
-                                x = mean(myt(plot.dc.tmp$drug.use)), y = 20))
+    d.use.tmp = d.use[c("CountryTerritoryArea", dcs$Relevant_ATC_Codes[i])]
+    colnames(d.use.tmp)[1] = "country"
+    h.out.tmp = long.df[long.df$name == dcs$Resistance_Code[i], c("country", "region", "ccode", "name", "Value")]
+    plot.dc.tmp = merge(d.use.tmp, h.out.tmp, by="country")
+    colnames(plot.dc.tmp)[2] = "drug.use"
+    my.lm = lm(plot.dc.tmp$Value ~ myt(plot.dc.tmp$drug.use))
+    pval = round(summary(my.lm)$coefficients[2,4], digits=3)
+    plot.dc.tmp$drug.label = paste0(dcs$Relevant_ATC_Codes[i], "/", dcs$Resistance_Code[i], ", p = ", pval, collapse="")
+    plot.dc = rbind(plot.dc, plot.dc.tmp)
+    p.df = rbind(p.df, data.frame(p = paste0("p=",pval,collapse=""), drug.label =paste0(dcs$Relevant_ATC_Codes[i], "/", dcs$Resistance_Code[i], ", p = ", pval, collapse=""), 
+                                  x = mean(myt(plot.dc.tmp$drug.use)), y = 20))
   }
 }
 
-  ggplot(plot.dc, aes(x=myt(drug.use), y=Value)) + 
-    geom_smooth(method="lm", fill="#AAAAFF55", color="#AAAAFF99") +
-    geom_point(aes(color=region, label=ccode)) + 
-    geom_text_repel(size=2.5, alpha=0.7, aes(color=region, label=ccode)) + 
-    geom_text(data = p.df, aes(x = x, y = y, label = p),
-              inherit.aes = FALSE) +
-    theme_minimal() +
-    facet_wrap(~drug.label, scales="free_x") +
-    labs(x = "sqrt (median drug use)", y = "Expected acquisition ordering", color = "Region")
-  
-  ggplot(plot.dc[plot.dc$drug.label=="J01DH/Bla_Carb-a",], aes(x=myt(drug.use), y=Value)) + 
-    geom_smooth(method="lm", fill="#AAAAFF55", color="#AAAAFF99") +
-    geom_point(aes(color=region)) + 
-    geom_text_repel(size=3, alpha=0.7, aes(color=region, label=country)) + 
-    geom_text(data = p.df[p.df$drug.label=="J01DH/Bla_Carb-a",], aes(x = x, y = y, label = p),
-              inherit.aes = FALSE) +
-    theme_minimal() +
-    facet_wrap(~drug.label, scales="free_x") +
-    labs(x = "sqrt (median drug use)", y = "Expected acquisition ordering", color = "Region")
-  
-  library(lme4)
-  
-  my.lmm = lmer(Value ~ myt(drug.use) + (myt(drug.use) | drug.label), data = plot.dc)
-  my.null = lmer(Value ~ 1 + (1 | drug.label), data = plot.dc)
-  
-  anova(my.lmm, my.null)
-  
- ##########
-  library(phytools)
-  country = "Romania"
-  tree.path <- paste0("clean/",country,".nwk")
-  if (!file.exists(tree.path)) {
-    stop(paste("No newick-tree for", country, "in clean directory"))
-  }
-  
-  if (!file.exists("clean/kleborate-dichotomized.csv")) {
-    stop("Run preprocess_kleborate.R first!")
-  }
-  
-  resistance.df <- read.csv("clean/kleborate-dichotomized.csv")
-  featurenames <- setdiff(colnames(resistance.df), "id")
-  
-  ctree <- curate.tree(tree.path, 
-                       "clean/kleborate-dichotomized.csv")
-  
-  ### upset plot
-  resistance.df.l <- pivot_longer(resistance.df, setdiff(colnames(resistance.df), "id"))
-  resistance.df.l <- resistance.df.l[resistance.df.l$value==1,]
-  
-  upset.plot <- resistance.df.l %>% 
-    group_by(id) %>% 
-    dplyr::summarize(Genes = list(name)) %>% 
-    ggplot(aes(x = Genes)) + 
-    geom_bar() + 
-    scale_x_upset(n_intersections=30) +
-    labs(x="Resistance character profiles", y="Count") 
-  upset.plot
-  
-ctree.tmp = ctree
-colnames(ctree.tmp$data) = gsub("_acquired", "-a", colnames(ctree.tmp$data))
-colnames(ctree.tmp$data) = gsub("_mutations", "-m", colnames(ctree.tmp$data))
-res.tmp = country.list$Romania$seed.3
-res.tmp$bubbles$Name = gsub("_acquired", "-a", res.tmp$bubbles$Name)
-res.tmp$bubbles$Name = gsub("_mutations", "-m", res.tmp$bubbles$Name)
-res.tmp$featurenames = gsub("_acquired", "-a", res.tmp$featurenames)
-res.tmp$featurenames = gsub("_mutations", "-m", res.tmp$featurenames)
+# pull all drug plots together
+g.drugs = ggplot(plot.dc, aes(x=myt(drug.use), y=Value)) + 
+  geom_smooth(method="lm", fill="#AAAAAA55", color="#AAAAAA99") +
+  geom_point(size=1,aes(color=region, label=ccode)) + 
+  geom_text_repel(size=2, alpha=0.7, aes(color=region, label=ccode)) + 
+  theme_minimal() +
+  facet_wrap(~drug.label, scales="free_x") +
+  labs(x = "sqrt (median drug use)", y = "Expected\nacquisition ordering", color = "Region")
 
-g.fig2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
-            coord_cartesian(clip = "off") + theme(
-              plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
-            ),
-          ggarrange(
-            plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
-            plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
-                                        edge.check.overlap = FALSE, edge.label.angle = "none",
-                                        no.times = TRUE),
-            nrow=2, labels=c("D", "E")), 
-          nrow=1, labels=c("C", ""))
+# reformat geographical covariate plot
+g.covariates = ggarrange(
+  ggarrange(
+    g.region.2z + labs(x="Region", y="PCA2"), 
+    g.region.3z + labs(x="Region", y="PCA3"), 
+    nrow=1, labels=c("A", "B")), 
+  g.region.indz + labs(y="Expected\nacquisition ordering"), 
+  g.drugs + scale_color_viridis_d(option="magma") + theme(legend.position="none"), nrow=3, heights=c(0.7,0.7,1), labels=c("", "C", "D"))
 
-png("igj-fig2.png", width=700*sf, height=500*sf, res=72*sf)
-g.fig2
+# pull geographical and drug covariate plots together
+png("covariates.png", width=500*sf, height=600*sf, res=72*sf)
+g.covariates
 dev.off()
 
-png("igj-upset.png", width=600*sf, height=600*sf, res=72*sf)
-upset.plot
-dev.off()
+############### TASK 7 -- summary global data 
 
-#### world map plot
+if (!file.exists("clean/kleborate-dichotomized.csv")) {
+  stop("Run preprocess_kleborate.R first!")
+}
 
+# read in resistance data
+resistance.df <- read.csv("clean/kleborate-dichotomized.csv")
+featurenames <- setdiff(colnames(resistance.df), "id")
+
+# now working with global data, pull resistance feature info
+resistance.df.l <- pivot_longer(resistance.df, setdiff(colnames(resistance.df), "id"))
+resistance.df.l <- resistance.df.l[resistance.df.l$value==1,]
+
+# create dataframe for UpSet plot
+to.upset.plot = resistance.df.l %>% 
+  group_by(id) %>% 
+  dplyr::summarize(Genes = list(name)) %>%
+  mutate(n_features = lengths(Genes))
+
+# make UpSet plot
+upset.plot = ggplot(to.upset.plot, aes(x = Genes, fill = n_features)) + 
+  geom_bar() + 
+  scale_x_upset(n_intersections=30) +
+  scale_fill_gradientn(
+    colours = c("blue", "orange", "red"),
+    name = "Number of\nfeatures"
+  ) +
+  labs(x="Resistance character profiles", y="Number of genomes") +
+  theme_minimal() + theme(legend.position = "none")
+
+# create data frame for world map plot
 c.df = data.frame()
 cnames = names(country.list)
 for(country in cnames) {
@@ -537,14 +448,14 @@ for(country in cnames) {
 c.df$country = gsub("_", " ", c.df$country)
 c.df$country[c.df$country=="United Kingdom"] <- "UK"
 
-# Get map data
+# get map data
 world <- map_data("world")
 
-# Merge your counts with map polygons
+# merge counts with map polygons
 world_data <- world %>%
   left_join(c.df, by = c("region" = "country"))
 
-# Plot
+# plot world map
 plot.world = ggplot(world_data, aes(x = long, y = lat, group = group, fill = log10(count))) +
   geom_polygon(color = "gray70", size = 0.1) +
   scale_fill_viridis_c(option = "magma", na.value = "white", direction=-1) +
@@ -552,98 +463,91 @@ plot.world = ggplot(world_data, aes(x = long, y = lat, group = group, fill = log
   theme_minimal() +
   labs(x=NULL, y=NULL, fill = "log10\n# genomes")
 
-png("igj-world.png", width=600*sf, height=300*sf, res=72*sf)
-plot.world
-dev.off()
-
+# initialise global data frame with an example (just for structure of data frame)
 rdf = df[df$country=="Australia", c(1, 3, 5)]
+
+# number of countries
 ncountries = length(unique(df$country))
+
+# loop over elements of the bubble plot, pulling average value over all countries for each
 for(i in 1:nrow(rdf)) {
   refs = which(df$Time == rdf$Time[i] & df$OriginalIndex == rdf$OriginalIndex[i])
   rdf$Probability[i] = sum(df$Probability[refs])/ncountries
 }
-global.plot = ggplot() +
-  geom_point(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#0000FF88") + 
-  geom_point(data=rdf[rdf$Probability <= 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability), color="#88888844") +
-  theme_minimal() + labs(x="Ordinal time", y="KpAMR character", size="Mean\nacquisition\nprobability")
+
+# produce global bubble plot
+global.plot.alt = ggplot(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feature.names[OriginalIndex+1], size=Probability, color=Time)) + 
+  geom_point(shape=16) + theme_minimal() + theme(legend.position = "none") +
+  scale_colour_gradientn(
+    colours = c("darkblue", "blue", "red", "darkred"),
+    values = scales::rescale(c(0, 7, 14, 21))
+  ) + labs(y=NULL, x="Ordinal Time") 
+
+# highlight bimodal features
+global.plot.alt.hl = highlight_layer(global.plot.alt, c(2, 12, 18))
 
 sf = 2
-png("global-plot.png", width=400*sf, height=300*sf, res=72*sf)
-print(global.plot)
+png("global-plot-alt.png", width=250*sf, height=250*sf, res=72*sf)
+print(global.plot.alt.hl+xlab("Evolutionary ordering"))
 dev.off()
 
-
-g.fig2.alt = ggarrange(global.plot,
-  plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
-                     coord_cartesian(clip = "off") + theme(
-                       plot.margin = unit(c(1, 1, 4, 1), "lines") # top, right, bottom, left
-                     ),
-                   
-                     plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
-                     plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
-                                                 edge.check.overlap = FALSE, edge.label.angle = "none",
-                                                 no.times = TRUE),
-                     nrow=2, ncol=2, labels=c("C", "D", "E", "F"))
-g.fig2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
-                         coord_cartesian(clip = "off") + theme(
-                           plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
-                         ),
-                       ggarrange(
-                         plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
-                         plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
-                                                     edge.check.overlap = FALSE, edge.label.angle = "none",
-                                                     no.times = TRUE),
-                         global.plot,
-                         nrow=3, labels=c("D", "E", "F")), 
-                       nrow=1, labels=c("C", ""), widths=c(1.5,2))
-
-png("fig2-alt.png", height=600*sf, width=600*sf, res=72*sf)
-g.fig2.alt
-dev.off()
-
+# read in data on dates of samples and process
 y.df = read.csv("misc-data/date-data.csv")
 y2.df = y.df[y.df$isolation_year>2008,1:2]
-y2.df = rbind(y2.df, data.frame(isolation_year = "Pre-2008", count=sum(y.df$count[y.df$isolation_year>0 &
-                                                                                    y.df$isolation_year<2008])))
-y2.df = rbind(y2.df, data.frame(isolation_year = "NA", count=y.df$count[y.df$isolation_year==0 |
-                                                                          y.df$isolation_year=="No value"]))
-date.plot = ggplot(y2.df, aes(x=isolation_year, y=count)) + geom_col() + 
-  theme(axis.text.x = element_text(angle=45, hjust=1)) +
-  labs(x="Isolation year", y="Count")
-png("igj-dates.png", width=400*sf, height=200*sf, res=72*sf)
-date.plot
-dev.off()
+y2.df = rbind(y2.df, data.frame(isolation_year = "Pre-2008", count=sum(y.df$count[y.df$isolation_year>0 & y.df$isolation_year<2008])))
+y2.df = rbind(y2.df, data.frame(isolation_year = "NA", count=y.df$count[y.df$isolation_year==0 | y.df$isolation_year=="No value"]))
 
-g.fig2.full = ggarrange(ggarrange(ggarrange(plot.world, date.plot, labels=c("Ai", "ii"), nrow=2, heights=c(1.5,1)), upset.plot+ylab("\n\nCount")+
-                                    theme_combmatrix(combmatrix.panel.point.size = 1,
-                                                     combmatrix.panel.line.size  = 0.5) , nrow=1, labels=c("", "B")),
-                        g.fig2.alt, nrow=2, heights=c(1,2.25))
+# produce plot
+date.plot = ggplot(y2.df, aes(x=isolation_year, y=count)) + geom_col() +
+  labs(x="Isolation year", y="Genomes") + theme_minimal() +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) 
 
-png("fig2-full.png", width=700*sf, height=900*sf, res=72*sf)
-g.fig2.full
-dev.off()
-
-g.fig.alt.1 = ggarrange(ggarrange(plot.world, date.plot, labels=c("Ai", "ii"), nrow=2, heights=c(1.5,1)), upset.plot+ylab("\n\nCount")+
-                                    theme_combmatrix(combmatrix.panel.point.size = 1,
-                                                     combmatrix.panel.line.size  = 0.5) , nrow=1, labels=c("", "B"))
+# combine world map, dates, and UpSet plots
+g.fig.alt.1 = ggarrange(ggarrange(plot.world, 
+                                  date.plot+ylab("\n\nGenomes"), labels=c("Ai", "ii"), nrow=2, heights=c(1.5,1)), 
+                        upset.plot+ylab("\n\nNumber of\ngenomes")+
+                          theme_combmatrix(combmatrix.panel.point.size = 1,
+                                           combmatrix.panel.line.size  = 0.5) , nrow=1, labels=c("", "B"))
 
 png("fig-alt-1.png", width=700*sf, height=300*sf, res=72*sf)
 g.fig.alt.1
 dev.off()
 
-g.fig.alt.2 = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
-                         coord_cartesian(clip = "off") + theme(
-                           plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
-                         ),
-                       ggarrange(
-                         plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
-                         plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
-                                                     edge.check.overlap = FALSE, edge.label.angle = "none",
-                                                     no.times = TRUE),
-                         global.plot,
-                         nrow=3, labels=c("B", "C", "D")), 
-                       nrow=1, labels=c("A", ""), widths=c(1.5,2))
+############### TASK 8 -- case study plot
 
-png("fig-alt-2.png", width=700*sf, height=600*sf, res=72*sf)
-g.fig.alt.2
+# read in phylogeny for case study data
+country = "Romania"
+tree.path <- paste0("clean/",country,".nwk")
+if (!file.exists(tree.path)) {
+  stop(paste("No newick-tree for", country, "in clean directory"))
+}
+
+# produce curated tree for case study
+ctree <- curate.tree(tree.path, 
+                     "clean/kleborate-dichotomized.csv")
+
+# curate and relabel data for simplicity
+ctree.tmp = ctree
+colnames(ctree.tmp$data) = gsub("_acquired", "-a", colnames(ctree.tmp$data))
+colnames(ctree.tmp$data) = gsub("_mutations", "-m", colnames(ctree.tmp$data))
+res.tmp = country.list$Romania$seed.3
+res.tmp$bubbles$Name = gsub("_acquired", "-a", res.tmp$bubbles$Name)
+res.tmp$bubbles$Name = gsub("_mutations", "-m", res.tmp$bubbles$Name)
+res.tmp$featurenames = gsub("_acquired", "-a", res.tmp$featurenames)
+res.tmp$featurenames = gsub("_mutations", "-m", res.tmp$featurenames)
+
+g.2.alt = ggarrange(plotHypercube.curated.tree(ctree.tmp, font.size = 2.5, hjust=1) +
+                      coord_cartesian(clip = "off") + theme(
+                        plot.margin = unit(c(1, 1, 4, 1), "lines")  # top, right, bottom, left
+                      ),
+                    plotHypercube.sampledgraph2(res.tmp, truncate = 6, node.labels=FALSE, edge.label.size = 3,
+                                                edge.check.overlap = FALSE, edge.label.angle = "none",
+                                                no.times = TRUE),
+                    b.plot("Romania") + theme(legend.position="right") + guides(color = "none") + xlab("Evolutionary ordering"),
+                    # plotHypercube.bubbles(res.tmp, p.color = "#8888FF55") + labs(size="Probability"),
+                    
+                    nrow=1)
+png("fig-g2alt.png", width=1100*sf*0.9, height=300*sf*0.7, res=72*sf)
+g.2.alt
 dev.off()
+
