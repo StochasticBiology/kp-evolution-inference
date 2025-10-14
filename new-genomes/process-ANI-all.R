@@ -9,7 +9,7 @@ library(ggplot2)
 library(ggpubr)
 library(dplyr)
 
-run.inference = TRUE
+run.inference = FALSE
 options(ignore.negative.edge=TRUE)
 
 sf = 2
@@ -243,6 +243,12 @@ comp.plot.z = ggplot(df_summary.z[!(df_summary.z$column %in% c("id","strain")),]
   scale_fill_manual(values=c("#88CCFF", "#880000", "#CCCCCC", "#FF8800", "#005500")) + 
   labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
 
+cpz.labs = gsub("_mutations", "-m", 
+                gsub("_acquired", "-a", 
+                     sort(unique(df_summary.z$column))))
+
+comp.plot.z + scale_x_discrete(breaks=sort(unique(df_summary.z$column)), labels=cpz.labs)
+
 png("new-data-comp-z.png", width=600*sf, height=800*sf, res=72*sf)
 ggarrange( ct.plots.z, comp.plot.z, heights = c(3, 1), labels=c("", "E"), nrow=2)
 dev.off()
@@ -355,4 +361,18 @@ dev.off()
 png("new-data-summaries.png", width=1000*sf, height=600*sf, res=72*sf)
 ggarrange(ct.plots.z, circ.tree, nrow=1, labels=c("", "E"), widths=c(1,1.3))
 dev.off()
+
+png("predictions-138-new-rehash.png", width=600*sf, height=500*sf, res=72*sf)
+ggarrange(all.data.plot, ggarrange(predict.plot  + 
+                                     scale_fill_manual(values=c("#880000", "#000088")) +
+                                     scale_color_manual(values=c("#AA0000", "#0000AA"))+
+                                     guides(color="none"),
+                                   comp.plot.z + 
+                                     coord_flip() + xlab("Resistance character") +
+                                     scale_x_discrete(breaks=sort(unique(df_summary.z$column)), labels=cpz.labs)
+                                   , 
+                                   labels=c("B","C"), nrow=2, heights=c(0.5,1)), 
+          nrow = 1, labels=c("A", ""))
+dev.off()
+
 
