@@ -9,7 +9,7 @@ library(ggplot2)
 library(ggpubr)
 library(dplyr)
 
-run.inference = FALSE
+run.inference = TRUE
 options(ignore.negative.edge=TRUE)
 
 sf = 2
