@@ -9,10 +9,22 @@ library(ggplot2)
 library(ggpubr)
 library(dplyr)
 
+# should we run HyperTraPS for the new genome data? TRUE if so; FALSE if we've already done so (to save time)
 run.inference = TRUE
-options(ignore.negative.edge=TRUE)
 
+# graphics styling options
+options(ignore.negative.edge=TRUE)
 sf = 2
+
+# broad contents
+# TASK 1 -- read data
+# TASK 2 -- diagnostics of structure in genetic space
+# TASK 3 -- create tree from ANI values (Fig. S5A)
+# TASK 4 -- consider AMR features in the old and new datasets
+# TASK 5 -- consider Zanzibar observations (Fig. 5, S5B)
+# TASK 6 -- test predictions on new data (Fig. 5B)
+
+############ TASK 1 -- read data
 
 # read summary ANI scores from all-all comparison (old and new)
 df = read.csv("data/138-summary.txt", skip=1, sep=" ", header=FALSE)
@@ -20,10 +32,14 @@ colnames(df) = c("isolate.1", "isolate.2", "ani")
 df.mis = read.csv("data/138-bases.txt", skip=1, sep=" ", header=FALSE)
 colnames(df.mis) = c("isolate.1", "isolate.2", "bases")
 
+############ TASK 2 -- diagnostics of structure in genetic space
+
+# genome labels have some connection to the data provenance:
 # "2457" = old
 # "SAMN" = Kleborate
 # "247"etc = new
 
+# use these patterns to compare different genomes
 df.mis = cbind(df.mis, data.frame(ani=df$ani))
 df.mis$class = 0
 df.mis$class[grep("SAMN", df.mis$isolate.1)] = 1+df.mis$class[grep("SAMN", df.mis$isolate.1)] 
@@ -38,6 +54,7 @@ df.mis$class[df.mis$class == 10] = "New-old"
 df.mis$class[df.mis$class == 11] = "Kleb-old"
 df.mis$class[df.mis$class == 20] = "Old-old"
 
+# diagnostic plots of unaligned base statistics 
 diag.1 = ggplot(df.mis, aes(x=bases, y=ani, color=factor(class))) + 
   geom_point(size=1) + theme_minimal() +
   labs(x = "% bases unaligned", y = "ANI among aligned bases")
@@ -55,6 +72,8 @@ png("diagnosis-plot.png", width=600*sf, height=600*sf, res=72*sf)
 ggarrange(diag.1, diag.2)
 dev.off()
 
+############ TASK 3 -- create tree from ANI values
+
 # phrase as distances and initialise a distance matrix
 df$distance = 1 - df$ani/100
 ids = unique(df$isolate.1)
@@ -69,12 +88,12 @@ for(i in 1:nrow(df)) {
   am[x,y] = am[y,x] = df$distance[i]*10
 }
 
-# get a tree by clustering
+# get a tree by clustering; method can be chosen
 treeNJ = upgma(am)
 #treeNJ = NJ(am)
 
+# plot and record tree
 plot(treeNJ)
-
 write.tree(treeNJ, "tree-all.phy")
 
 # label old and new differently
@@ -82,6 +101,7 @@ tip.cols = rep("blue", length(treeNJ$tip.label))
 tip.cols[grep("SAMN", treeNJ$tip.label)] = "red"
 tip.cols[grep("2457", treeNJ$tip.label)] = "green"
 
+# various tree visualisations
 vert.tree = ggtree(treeNJ) +  geom_tiplab(size=3,color = tip.cols)
 png("tree-all.png", width=800*sf, height=2000*sf, res=72*sf)
 print(vert.tree)
@@ -97,13 +117,15 @@ png("tree-all-circ.png", width=800*sf, height=800*sf, res=72*sf)
 print(circ.tree)
 dev.off()
 
+############ TASK 4 -- consider AMR features in the old and new datasets
+
 # pull the feature sets from the new dataset
 tmpdf = read.csv("data/dichotomized_1_3_8.csv")
 tmpdf = cbind(tmpdf$strain, tmpdf)
 colnames(tmpdf)[c(1,2)] = c("X", "id")
 idset = sapply(strsplit(tmpdf$id, "[.]"), `[`, 1)
 f.df = data.frame(id = idset, tmpdf[,3:ncol(tmpdf)])
-new.set = curate.tree(treeNJ, f.df) # XXX why doesn't this throw an error -- as we don't have the old features yet?
+new.set = curate.tree(treeNJ, f.df) 
 
 # get the old tree based on LIN codes
 old.tree = read.tree("data/Tanzania.nwk")
@@ -122,7 +144,7 @@ plotHypercube.curated.tree(old.ct)
 
 plot.old = plotHypercube.curated.tree(old.ct)
 
-# do the inference (should match Olav's output)
+# do the inference, if specified (should match Olav's output)
 if(run.inference == TRUE) {
 old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
                      length = 5, kernel = 3, walkers = 400,
@@ -131,6 +153,8 @@ old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs,
 } else {
   load("fitted-analysed-138-fit.RData")
 }
+
+# pull and look at some summaries of inferred dynamics
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
 
@@ -152,6 +176,7 @@ fboth.df = rbind(f.df, f2.df)
 all.ct = curate.tree(treeNJ, fboth.df)
 plotHypercube.curated.tree(all.ct)
 
+# label genomes according to their provenance, again using:
 # "2457" = old
 # "SAMN" = Kleborate
 # "247"etc = new
@@ -163,6 +188,7 @@ old.sabrina.ct = curate.tree(treeNJ, old.sabrina)
 new.sabrina.ct = curate.tree(treeNJ, new.sabrina)
 kleb.df.ct = curate.tree(treeNJ, kleb.df)
 
+# pull these data together into a collection of summary plots
 ct.plots = ggarrange(plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
             coord_cartesian(clip = "off") + theme(
               plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
@@ -200,6 +226,8 @@ png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
 ggarrange( ct.plots, comp.plot, heights = c(2, 1), labels=c("", "D"), nrow=2)
 dev.off()
 
+############ TASK 5 -- consider Zanzibar observations
+
 zanzibar.df = read.csv("data/zanzibar-dichotomized.csv")
 
 zanzibar.tree <- curate.tree("data/zanzibar-4-tree-1.phy", "data/zanzibar-dichotomized.csv")
@@ -210,7 +238,7 @@ plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 3) +
   )
 dev.off()
 
-
+# now fold the Zanzibar data into the summary plots
 ct.plots.z = ggarrange(plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.size = 2) +
                          coord_cartesian(clip = "off") + theme(
                            plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
@@ -253,6 +281,7 @@ png("new-data-comp-z.png", width=600*sf, height=800*sf, res=72*sf)
 ggarrange( ct.plots.z, comp.plot.z, heights = c(3, 1), labels=c("", "E"), nrow=2)
 dev.off()
 
+# use numerical multipliers to label the different data provenances
 # SAMN = Kleborate = highest multiplier (x3)
 # 2457 = old = next multiplier (x2)
 # remaining 247 = new = no multiplier (1)
@@ -271,9 +300,6 @@ all.data.plot = plotHypercube.curated.tree(all.ct, factor.vals = TRUE, hjust = 1
   scale_fill_manual(values = c("white", "grey", "#4444FF", "#FF8888")) +  
   scale_y_continuous(expand = expansion(mult = c(0.2, 0.05)))
 
-
-### need to look into this Rif_acquired behaviour
-
 # some comparisons of ANI to LIN code trees
 mean(am)
 # very highly related by LIN
@@ -288,6 +314,8 @@ am["SAMN10390525","SAMN10390453"]
 am["SAMN10390519","SAMN10390542"]
 am["SAMN10390499","SAMN10390526"]
 am["SAMN10390509","SAMN10390515"]
+
+############ TASK 6 -- test predictions on new data
 
 # get sets of nodes that only have new data as descendants
 n.tips = length(treeNJ$tip.label) 
@@ -306,8 +334,6 @@ for(i in 1:nrow(all.ct$transitions)) {
     safe.trans = c(safe.trans, i)
   }
 }
-
-# XXX NEXT DO PREDICTIONS FOR DIFFERENT TIMES OF DATA
 
 # construct predictions from (differently trained!) inference, and test with respect to new independent transitions
 freqs = colSums(old.refs[,4:ncol(old.refs)])/nrow(old.refs)
@@ -341,9 +367,7 @@ for(j in 1:length(safe.trans)) {
   }
 }
 
-#ggplot(preds.ranks, aes(x=ranks)) + geom_histogram() + facet_wrap(~ model, nrow=3)
-# ^ well, not hugely impressive
-
+# compare untrained and trained model performance
 predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=ranks, color=model, fill=model)) + 
   geom_histogram(aes(y=..density..), binwidth=1, position="dodge")+
   geom_density(alpha=0.4) + 
@@ -352,6 +376,7 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=rank
   theme_minimal()
 predict.plot
 
+# various stylings of summary plots
 sf = 3
 png("predictions-138-new.png", width=500*sf, height=600*sf, res=72*sf)
 ggarrange(ggarrange(all.data.plot, predict.plot, widths=c(1.,1), nrow=1, labels=c("A", "B")),
