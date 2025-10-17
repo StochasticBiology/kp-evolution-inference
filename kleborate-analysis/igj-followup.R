@@ -551,3 +551,39 @@ png("fig-g2alt.png", width=1100*sf*0.9, height=300*sf*0.7, res=72*sf)
 g.2.alt
 dev.off()
 
+############### TASK 9 -- mega bubble plot
+
+# get counts of genomes from each country
+c.counts = unique(data.frame(name=world_data$region, count=world_data$count))
+c.counts = c.counts[!is.na(c.counts$count),]
+# use these to order country names
+c.ordered = c.counts$name[order(c.counts$count)]
+c.ordered = gsub("UK", "United_Kingdom", c.ordered)
+c.ordered = gsub(" ", "_", c.ordered)
+setdiff(df$country, c.ordered)
+
+# edit names of features
+df$new.name = gsub("_mutations", "-m", gsub("_acquired", "-a", df$Name))
+# get mean ordering for each feature across dataset
+df$mean = df$Time*df$Probability
+f.names = unique(df$new.name)
+f.means = c()
+for(this.name in f.names) {
+  f.means = c(f.means, sum(df$mean[df$new.name==this.name]))
+}
+# use this to order features
+f.ordered = f.names[order(f.means)]
+
+# make the megaplot
+all.plot = ggplot(df[!(df$country %in% setdiff(df$country, c.ordered)),], 
+       aes(x=Time, y=factor(country, levels=c.ordered), size=Probability, color = Time)) + 
+  geom_point(shape =16) +
+  facet_wrap(~factor(new.name, levels=f.ordered), nrow=1) +
+  scale_color_gradientn(colours = c("darkblue", "blue", "red", "darkred")) +
+  labs(x="Evolutionary ordering", y="Country") + guides(color = "none") + theme_minimal()
+
+# output
+sf = 3
+png("all-plot.png", width=1700*sf, height=900*sf, res=72*sf)
+print(all.plot)
+dev.off()
