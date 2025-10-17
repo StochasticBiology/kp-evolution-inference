@@ -27,6 +27,7 @@ sf = 2
 # TASK 6 -- drug use data and acquisition (Fig 4D)
 # TASK 7 -- summary global data (Fig 1A-B, Fig 2A)
 # TASK 8 -- case study plot (Fig 1C)
+# TASK 9 -- mega bubble plot (Supp Fig 2)
 
 ############### TASK 1 -- preprocessing and curating
 
