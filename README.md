@@ -16,7 +16,10 @@ The genome assembly needs RagTag https://github.com/malonge/RagTag and Mummer e.
 
 # General pipeline illustration
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/6b6840c4-9a5f-4c4c-8a92-751b4e382ded" />
+| kleborate-analysis/ | new-genomes/ | reversibility-control/ |
+|---------------------|--------------|-------------------------|
+| **Download and preprocess Kleborate data (hours)**<br>pipeline_preprocessing.R<br>- download.pathogen.watch<br>- preprocess.kleborate<br>- preprocess.metadata<br>- prepare.all.lincoding.files<br>- make_trees.sh (tens of minutes/hours)<br>[uses LINcoding.py, externally produced]<br>- get.tree.metrics (minutes)<br><br>↓<br><br>**Parallelised inference using Kleborate data across countries (days–weeks)**<br>pipeline_run_all.sh<br>- run_hypertraps.R<br><br>↓<br><br>**Analysis and visualisation (minutes)**<br>- pipeline_plot_all.R [outputs all_models.Rdata, a good save point]<br>- igj.R<br>- igj-followup.R | **New genome data**<br>[not currently in repo] and existing Kp records [not]<br><br>↓<br><br>**Identify Kp isolates and calculate ANIs (hours)**<br>run-new-genomes.sh<br>- align-batch.sh (minutes)<br>- process-pairs.sh (hours)<br>- process-reports.sh<br><br>↓<br><br>**Get new transitions and do inference (hours)**<br>process-ANI-all.R<br><br>↓<br><br>**Plotting and analysis (minutes)**<br>process-ANI-all.R | **Synthetic control study on reversibility in HyperTraPS (tens of minutes)**<br><br>reversibility-control.R (tens of minutes) |
+
 
 # Inference using Kleborate data 
 
