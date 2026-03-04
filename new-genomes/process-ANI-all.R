@@ -11,6 +11,7 @@ library(dplyr)
 
 # should we run HyperTraPS for the new genome data? TRUE if so; FALSE if we've already done so (to save time)
 run.inference = TRUE
+regularise.output = FALSE
 
 # graphics styling options
 options(ignore.negative.edge=TRUE)
@@ -145,15 +146,40 @@ plotHypercube.curated.tree(old.ct)
 plot.old = plotHypercube.curated.tree(old.ct)
 
 # do the inference, if specified (should match Olav's output)
+set.seed(1)
+# use all the data for training (we'll be comparing to new data)
+training = 1:nrow(old.ct$dests)
 if(run.inference == TRUE) {
-old.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
-                     length = 5, kernel = 3, walkers = 400,
-                     seed = 1)
-  save(old.fit, file="fitted-analysed-138-fit.Rdata")
+  old.fit = HyperTraPS(old.ct$dests[training,], initialstates = old.ct$srcs[training,], 
+                       length = 5, kernel = 2, walkers = 400,
+                       seed = 1, penalty=1)
+  save(old.fit, file="fitted-penalised-analysed-138-fit.Rdata")
 } else {
-  load("fitted-analysed-138-fit.RData")
+  load("fitted-penalised-analysed-138-fit.RData")
 }
 
+#### analyse test set
+
+if(regularise.output) {
+  plotHypercube.lik.trace(old.fit)
+  trial = old.fit$best
+  priors = cbind(matrix(trial, ncol=1), matrix(trial+1e-3, ncol=1))
+  try.fit.0 = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs, 
+                         walkers = 400,
+                         priors=priors, length=1)
+  try.fit = HyperTraPS(old.ct$dests, initialstates = old.ct$srcs,
+                       priors=priors, length=1, 
+                       walkers = 400, regularise=1)
+  
+  save(try.fit, file="regularised-hypertraps.Rdata")
+  load("regularised-hypertraps.Rdata")
+  try.fit$regularisation$best
+  plotHypercube.sampledgraph2(try.fit)
+  plotHypercube.regularisation(try.fit)
+  plotHypercube.influencegraph(try.fit, thresh = 7, cv.thresh = 0.01, use.regularised = 1)
+}
+
+which(colSums(old.ct$dests)==0)
 # pull and look at some summaries of inferred dynamics
 old.fit$featurenames = colnames(f.df)[2:ncol(f.df)]
 plotHypercube.sampledgraph2(old.fit, node.labels = FALSE, no.times = TRUE, thresh=0.05, truncate = 6)
@@ -190,18 +216,18 @@ kleb.df.ct = curate.tree(treeNJ, kleb.df)
 
 # pull these data together into a collection of summary plots
 ct.plots = ggarrange(plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
-            coord_cartesian(clip = "off") + theme(
-              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-            ),
-          plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
-            coord_cartesian(clip = "off") + theme(
-              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-            ),
-          plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
-            coord_cartesian(clip = "off") + theme(
-              plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-            ), 
-          nrow=1, labels=c("A", "B", "C"))
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ),
+                     plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+                       coord_cartesian(clip = "off") + theme(
+                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                       ), 
+                     nrow=1, labels=c("A", "B", "C"))
 
 get_proportions <- function(df, name) {
   data.frame(
@@ -219,7 +245,7 @@ df_summary <- bind_rows(
 
 comp.plot = ggplot(df_summary[df_summary$column != "id",], aes(x=column, y=proportion, fill=dataset)) + 
   geom_col(position="dodge", width=0.65) +  theme_minimal() + theme(axis.text.x = element_text(angle=45, hjust=1)) +
-   scale_fill_manual(values=c("#8888FF", "#880000", "#88888855")) + 
+  scale_fill_manual(values=c("#8888FF", "#880000", "#88888855")) + 
   labs(x="Character", y="Proportion\nwith character", fill = "Dataset")
 
 png("new-data-comp.png", width=600*sf, height=600*sf, res=72*sf)
@@ -244,18 +270,18 @@ ct.plots.z = ggarrange(plotHypercube.curated.tree(zanzibar.tree, hjust=1, font.s
                            plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
                          ),
                        plotHypercube.curated.tree(old.sabrina.ct, hjust = 1, font.size = 2) +
-                       coord_cartesian(clip = "off") + theme(
-                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-                       ),
-                     plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
-                       coord_cartesian(clip = "off") + theme(
-                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-                       ),
-                     plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
-                       coord_cartesian(clip = "off") + theme(
-                         plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
-                       ), 
-                     ncol=2, nrow=2, heights=c(1,2), labels=c("A", "B", "C", "D"))
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                         ),
+                       plotHypercube.curated.tree(new.sabrina.ct, hjust=1, font.size = 2)+
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                         ),
+                       plotHypercube.curated.tree(kleb.df.ct, hjust=1, font.size = 2)+
+                         coord_cartesian(clip = "off") + theme(
+                           plot.margin = unit(c(0, 0, 3, 0), "cm")  # top, right, bottom, left
+                         ), 
+                       ncol=2, nrow=2, heights=c(1,2), labels=c("A", "B", "C", "D"))
 ct.plots.z
 
 df_summary.z <- bind_rows(
@@ -317,6 +343,11 @@ am["SAMN10390509","SAMN10390515"]
 
 ############ TASK 6 -- test predictions on new data
 
+# label genomes according to their provenance, again using:
+# "2457" = old
+# "SAMN" = Kleborate
+# "247"etc = new
+
 # get sets of nodes that only have new data as descendants
 n.tips = length(treeNJ$tip.label) 
 safe.new = c()
@@ -335,13 +366,46 @@ for(i in 1:nrow(all.ct$transitions)) {
   }
 }
 
+all.ct$srcs[safe.trans[2],]
+all.ct$dests[safe.trans[2],]
+t.src = all.ct$srcs[safe.trans[2],]
+t.dest = all.ct$dests[safe.trans[2],]
+
+diff.rank.stepwise = function(t.src, t.dest) {
+  diff = sum(t.dest)-sum(t.src)
+  t.now = t.src
+  error = 0
+  #sum.msg = c("")
+  for(step in 1:diff) {
+    predict.fit = PosteriorAnalysis(old.fit, startstate = t.now)
+    p.rates = predict.fit$predictrates
+    p.ranks = rank(-p.rates)
+    future.changes = which(t.now != t.dest)
+    future.ranks = p.ranks[future.changes]
+    next.change = which(p.ranks == min(future.ranks))
+    # sum.msg = c(sum.msg, "next best change is ", next.change, " ranked ", min(future.ranks), "\n")
+    error = error + min(future.ranks) - 1
+    t.now[next.change] = 1
+  }
+  return(error)
+}
+
 # construct predictions from (differently trained!) inference, and test with respect to new independent transitions
 freqs = colSums(old.refs[,4:ncol(old.refs)])/nrow(old.refs)
 preds.ranks = data.frame()
+preds.sets = data.frame()
+preds.errors = data.frame()
 for(j in 1:length(safe.trans)) {
   changes = which(all.ct$srcs[safe.trans[j],] != all.ct$dests[safe.trans[j],])
   already = which(all.ct$srcs[safe.trans[j],] == 1)
-  if(length(changes) > 0) {
+  if(length(changes) > 0) { #& length(changes) < 5) {
+    stepwise = diff.rank.stepwise(all.ct$srcs[safe.trans[j],],
+                                  all.ct$dests[safe.trans[j],])
+    preds.sets = rbind(preds.sets,
+                       data.frame(ref=j, model="trained.stepwise", 
+                                  rank.diff=stepwise,
+                                  n.start = length(already),
+                                  n.change = length(changes)))
     # if this is a non-trivial transition
     predict.fit = PosteriorAnalysis(old.fit, startstate = all.ct$srcs[safe.trans[j],])
     p.rates = predict.fit$predictrates
@@ -351,30 +415,92 @@ for(j in 1:length(safe.trans)) {
     meaningful[already] = NA
     meaningful.ranks = rank(meaningful, na.last = "keep")
     changes.ranks = (1+n.poss-meaningful.ranks)[changes]
-    preds.ranks = rbind(preds.ranks, data.frame(ref=j, model="trained", ranks=changes.ranks))
+    preds.sets = rbind(preds.sets,
+                       data.frame(ref=j, model="trained", 
+                                  rank.diff=sum(changes.ranks)-sum(1:length(changes.ranks)),
+                                  n.start = length(already),
+                                  n.change = length(changes)))
+    preds.ranks = rbind(preds.ranks,
+                        data.frame(ref=j, model="trained", 
+                                   ranks=changes.ranks,
+                                   n.start = length(already),
+                                   n.change = length(changes)))
     # do this without trained model just based on frequencies
     untrained = freqs
     untrained[already] = NA
     untrained.ranks = rank(untrained, na.last = "keep")
     changes.ranks.untrained = (1+n.poss-untrained.ranks)[changes]
-    preds.ranks = rbind(preds.ranks, data.frame(ref=j, model="untrained", ranks=changes.ranks.untrained))
+    preds.sets = rbind(preds.sets,
+                       data.frame(ref=j, model="untrained", 
+                                  rank.diff=sum(changes.ranks.untrained)-sum(1:length(changes.ranks.untrained)),
+                                  n.start = length(already),
+                                  n.change = length(changes)))
+    preds.ranks = rbind(preds.ranks, data.frame(ref=j, model="untrained", 
+                                                ranks=changes.ranks.untrained,
+                                                n.start = length(already),
+                                                n.change = length(changes)))
     # do this with null model
     null = rep(1, length(freqs)) #runif(length(freqs))
     null[already] = NA
     null.ranks = rank(null, na.last = "keep")
     changes.ranks.null = (1+n.poss-null.ranks)[changes]
-    preds.ranks = rbind(preds.ranks, data.frame(ref=j, model="null", ranks=changes.ranks.null))
+    preds.ranks = rbind(preds.ranks, 
+                        data.frame(ref=j, model="null", 
+                                   ranks=changes.ranks.null,
+                                   n.start = length(already),
+                                   n.change = length(changes)))
   }
 }
 
-# compare untrained and trained model performance
-predict.plot = ggplot(preds.ranks[preds.ranks$model != "untrained",], aes(x=ranks, color=model, fill=model)) + 
+predict.diff.plot = ggplot(preds.sets[preds.sets$model!="trained",], aes(x=rank.diff, fill=model)) +
+  geom_histogram(aes(y=..density..), binwidth=1, position="dodge") +
+  facet_wrap(~ n.change) + theme_minimal()
+predict.diff.plot
+
+predict.plot = ggplot(preds.ranks[preds.ranks$model != "null",], aes(x=ranks, color=model, fill=model)) + 
   geom_histogram(aes(y=..density..), binwidth=1, position="dodge")+
   geom_density(alpha=0.4) + 
   labs(x = "Predicted rank of true next steps", y = "Probability", fill="Model") + 
   scale_color_discrete(guide="none") +
-  theme_minimal()
+  theme_minimal() + facet_wrap(~ n.change)
 predict.plot
+
+preds.ranks$label = ""
+preds.ranks$label[preds.ranks$model=="trained"] = "HyperTraPS"
+preds.ranks$label[preds.ranks$model=="untrained"] = "Prevalence"
+predict.plot = ggplot(preds.ranks[preds.ranks$n.change == 1 & preds.ranks$model != "null",], 
+                      aes(x=ranks, color=label, fill=label)) + 
+  geom_histogram(
+    aes(y = after_stat(density)),
+    binwidth = 1,
+    position = position_dodge(width = 0.75),
+    alpha=0.75
+  ) +
+  labs(x = "Predicted rank of true next step", y = "Proportion of\nnew transitions", fill="Model") + 
+  scale_color_discrete(guide="none") +
+  scale_x_continuous(breaks = function(x) seq(floor(min(x)), ceiling(max(x)), by = 1)) +
+  theme_minimal() 
+predict.plot
+png("~/Dropbox/Talks/HyperEvol/talk-predictions.png", width=250*sf, height=200*sf, res=72*sf)
+print(predict.plot)
+dev.off()
+png("one-step-predictions.png", width=250*sf, height=200*sf, res=72*sf)
+print(predict.plot)
+dev.off()
+
+if(FALSE) {
+  # compare untrained and trained model performance
+  predict.plot = ggplot(preds.ranks[preds.ranks$model != "null",], aes(x=ranks, color=model, fill=model)) + 
+    geom_histogram(aes(y=..density..), binwidth=1, position="dodge")+
+    geom_density(alpha=0.4) + 
+    labs(x = "Predicted rank of true next steps", y = "Probability", fill="Model") + 
+    scale_color_discrete(guide="none") +
+    theme_minimal()
+  predict.plot
+  
+  predict.plot + facet_wrap(~n.start)
+  predict.plot + facet_wrap(~n.change)
+}
 
 # various stylings of summary plots
 sf = 3
@@ -389,7 +515,7 @@ dev.off()
 
 png("predictions-138-new-rehash.png", width=600*sf, height=500*sf, res=72*sf)
 ggarrange(all.data.plot, ggarrange(predict.plot  + 
-                                     scale_fill_manual(values=c("#880000", "#000088")) +
+                                     scale_fill_manual(values=c("#DD0000", "#0000DD")) +
                                      scale_color_manual(values=c("#AA0000", "#0000AA"))+
                                      guides(color="none"),
                                    comp.plot.z + 
@@ -401,3 +527,93 @@ ggarrange(all.data.plot, ggarrange(predict.plot  +
 dev.off()
 
 
+######### assess model fit independently via likelihoods
+
+logsumexp <- function(v) {
+  m <- max(v)
+  if (!is.finite(m)) return(m)
+  m + log(sum(exp(v - m)))
+}
+
+poibin_logprob <- function(p, k) {
+  n <- length(p)
+  logdp <- rep(-Inf, k + 1)
+  logdp[1] <- 0
+  
+  for (i in seq_len(n)) {
+    logdp_new <- rep(-Inf, k + 1)
+    
+    # j = 0
+    logdp_new[1] <- logdp[1] + log1p(-p[i])
+    
+    if (k >= 1) {
+      for (j in 2:(k + 1)) {
+        a <- logdp[j]     + log1p(-p[i])
+        b <- logdp[j - 1] + log(p[i])
+        logdp_new[j] <- logsumexp(c(a, b))
+      }
+    }
+    
+    logdp <- logdp_new
+  }
+  
+  logdp[k + 1]
+}
+cond_profile_loglik <- function(p, x) {
+  stopifnot(length(p) == length(x))
+  k <- sum(x)
+  
+  # HARD logical checks first
+  if (any(x == 1 & p == 0)) return(-Inf)  # impossible
+  if (any(x == 0 & p == 1)) return(-Inf)  # impossible
+  
+  log_num <- sum(ifelse(x == 1, log(p), log1p(-p)))
+  log_den <- poibin_logprob(p, k)
+  
+  log_num - log_den
+}
+
+cond_profile_prob <- function(p, x) {
+  exp(cond_profile_loglik(p, x))
+}
+
+
+pred.df = data.frame()
+new.set = unique(all.ct$dests[safe.trans,])
+#new.set = as.matrix(old.refs[,4:ncol(old.refs)])
+#new.set = all.ct$dests[safe.trans,]
+for(i in 1:nrow(new.set)) {
+  test.obs = new.set[i,]
+  model.lik = getLikelihood(test.obs, old.fit$best, 2)
+  model.lik = model.lik / length(test.obs)
+  #freq.lik = exp(cond_profile_likelihood_fast(freqs, test.obs))
+  freq.lik = cond_profile_prob(freqs, test.obs) / length(test.obs)
+  pred.df = rbind(pred.df, data.frame(obs=paste0(test.obs,collapse=""),
+                                      n = sum(test.obs),
+                                      model.lik = model.lik,
+                                      freq.lik = freq.lik))
+}
+
+library(ggrepel)
+pred.df
+pred.df$freq.lik[pred.df$freq.lik==0] = NA
+pred.df$label = ""
+pred.df$label[pred.df$model.lik < 1e-5 | pred.df$freq.lik < 1e-5] = pred.df$obs[pred.df$model.lik < 1e-5 | pred.df$freq.lik < 1e-5] 
+ggplot(pred.df, aes(x=model.lik, y=freq.lik, label=label)) + 
+  geom_point() + geom_text_repel() + geom_abline() +
+  scale_x_log10() + scale_y_log10()
+ggplot(pred.df, aes(x=n, y=model.lik/freq.lik, label=n)) + geom_point() +
+  geom_text_repel() +
+  geom_abline(slope=0) + scale_y_log10() 
+length(which(pred.df$model.lik > pred.df$freq.lik))/nrow(pred.df)
+
+test.obs = rep(0, 22)
+cond_profile_prob(freqs, test.obs)
+test.obs[c(18)] = 1
+cond_profile_prob(freqs, test.obs)
+test.obs[c(18,19)] = 1
+cond_profile_prob(freqs, test.obs)
+
+profile_likelihood(freqs, test.obs)
+pred.df[pred.df$n==1,]
+pred.df[pred.df$n==3,]
