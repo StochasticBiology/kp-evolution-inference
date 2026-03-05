@@ -588,3 +588,35 @@ sf = 3
 png("all-plot.png", width=1700*sf, height=900*sf, res=72*sf)
 print(all.plot)
 dev.off()
+
+
+############### TASK 10 -- link between inferred ordering and prevalence
+
+all.df = read.csv("clean/kleborate-dichotomized.csv")
+prev.df = data.frame()
+
+for(country in names(country.list)) {
+  tree.path <- paste0("clean/",country,".nwk")
+  if (file.exists(tree.path)) {
+    
+    this.tree = read.tree(tree.path)
+    this.df = all.df[all.df$id %in% this.tree$tip.label,]
+    prev.df = rbind(prev.df,
+                    data.frame(country=country,
+                               char=colnames(this.df[2:ncol(this.df)]),
+                               prev=colMeans(this.df[2:ncol(this.df)]),
+                               inforder=as.numeric(wide_df[wide_df$country==country,2:ncol(this.df)]))
+    )
+  }
+}
+
+prev.df.pruned = prev.df[prev.df$prev > 0.05 & prev.df$prev < 0.95,]
+cor(prev.df.pruned$prev, prev.df.pruned$inforder)**2
+cor.plot = ggplot(prev.df.pruned, aes(x=prev, y=inforder, color=char)) + 
+  geom_point() + theme_minimal() + 
+  labs(x="Prevalence in country", y="Inferred ordering in country") +
+  theme(legend.position="none") 
+png("cor-prev-plot.png", width=800*sf, height=400*sf, res=72*sf)
+ggarrange(cor.plot, cor.plot + facet_wrap(~char),
+          labels = c("A", "B"), widths=c(1,2))
+dev.off()
