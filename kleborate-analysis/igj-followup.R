@@ -28,6 +28,8 @@ sf = 2
 # TASK 7 -- summary global data (Fig 1A-B, Fig 2A)
 # TASK 8 -- case study plot (Fig 1C)
 # TASK 9 -- mega bubble plot (Supp Fig 2)
+# TASK 10 -- link between inferred ordering and prevalence (Supp Fig)
+# TASK 11 -- compare irreversible and reversible fits for a subset of features and data (Supp Fig)
 
 ############### TASK 1 -- preprocessing and curating
 
@@ -619,4 +621,71 @@ cor.plot = ggplot(prev.df.pruned, aes(x=prev, y=inforder, color=char)) +
 png("cor-prev-plot.png", width=800*sf, height=400*sf, res=72*sf)
 ggarrange(cor.plot, cor.plot + facet_wrap(~char),
           labels = c("A", "B"), widths=c(1,2))
+dev.off()
+
+
+############### TASK 11 -- compare irreversible and reversible fits for a subset of features and data
+
+#### more detailed version (more features)
+#sub.cols = c("id", "MLS_acquired", "Bla_ESBL_acquired", "Sul_acquired", "Bla_chr", "Tet_acquired", "Gly_acquired")
+
+#### quicker version (fewer features)
+# going from L=5 to L=6 goes from a few minutes to >6 hr
+ sub.cols = c("id", "Bla_ESBL_acquired", "Sul_acquired", "Bla_chr", "Tet_acquired", "Rif_acquired")
+
+set.seed(1)
+
+run.inference = TRUE
+
+# get a random subset and look at its properties
+all.small = all.df[sample(1:nrow(all.df), 20), sub.cols]
+# enforce start and end states so we can compare methods
+all.small[20,2:ncol(all.small)] = 1
+all.small[19,2:ncol(all.small)] = 0
+colSums(all.small[,2:ncol(all.small)])
+
+library(hyperinf)
+library(parallel)
+
+if(run.inference == TRUE) {
+  # run reversible and irreversible HyperMk and HyperHMM fits
+  job1 = mcparallel({hyperinf(all.small, reversible=TRUE)})
+  job2 = mcparallel({hyperinf(all.small, method="hypermk", reversible=FALSE)})
+  job3 = mcparallel({hyperinf(all.small)})
+  job4 = mcparallel({hyperinf(all.small, method="hypertraps")})
+  results <- mccollect(list(job1, job2, job3, job4))
+
+  save(results, file="fit-rev-irrev-5.Rdata")
+} else {
+  load("fit-rev-irrev-5.Rdata")
+}
+
+# pull the results
+fit.rev = results[[1]]
+fit.irrev = results[[2]]
+fit.non.rev = results[[3]]
+fit.ht = results[[4]]
+hypertrapsct::plotHypercube.lik.trace(fit.ht)
+
+# model comparison rev vs irrev
+fit.rev$fitted_mk$AIC
+fit.irrev$fitted_mk$AIC
+
+# compare all inferred models
+plot_hyperinf_comparative(results, style="full")
+
+# just reversible HyperMk vs HyperTraPS
+plot_hyperinf_comparative(list(fit.rev, fit.ht), style="full")
+
+# plots with data
+
+all.plots = ggarrange(
+  plot_hyperinf_data(all.small),
+  plot_hyperinf_bubbles(list(fit.rev, fit.ht), sqrt.trans = TRUE, p.scale = 0.2, expt.names = c("Rev", "Irrev"))+ theme(legend.position="none"),
+  plot_hyperinf_comparative(list(fit.rev, fit.ht), bend = 1, style="full", expt.names = c("Rev", "Irrev")), nrow=1, widths=c(1,2.5,4), labels=c("i", "ii", "iii")
+)
+
+sf = 3
+png("rev-irrev-compare.png", width=600*sf, height=240*sf, res=72*sf)
+print(all.plots)
 dev.off()
