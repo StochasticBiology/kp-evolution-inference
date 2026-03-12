@@ -686,6 +686,6 @@ all.plots = ggarrange(
 )
 
 sf = 3
-png("rev-irrev-compare.png", width=600*sf, height=240*sf, res=72*sf)
+png("rev-irrev-compare.png", width=600*sf, height=200*sf, res=72*sf)
 print(all.plots)
 dev.off()
