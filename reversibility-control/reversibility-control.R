@@ -116,6 +116,7 @@ parallel.fn = function(ref, seed) {
                     seed = seed))
 }
 
+if(run.inference == TRUE) {
 # run these experiments in parallel. should take a few core minutes each
 n.seed = 2
 parallelised.runs <- mcmapply(parallel.fn, 
@@ -125,6 +126,9 @@ parallelised.runs <- mcmapply(parallel.fn,
                               mc.cores = min(detectCores(), 6*n.seed))
 
 save(parallelised.runs, file="new-rev-control.Rdata")
+} else {
+  load("new-rev-control.Rdata")
+}
 
 png("new-rev-control-reps.png", width=1000*sf, height=800*sf, res=72*sf)
 ggarrange(plotHypercube.bubbles.compare(parallelised.runs[1:2]),
@@ -154,6 +158,27 @@ ggarrange(plotHypercube.curated.tree(my.ct[[1]]),
           plotHypercube.curated.tree(my.ct[[6]]),
           plotHypercube.bubbles.compare(parallelised.runs[11:12]) +
             theme(legend.position="none"), ncol=4, nrow=3,
-          labels=c("A","","B","","C","","D","","E","","F",""))
+          labels=c("i","","ii","","iii","","iv","","v","","vi",""))
 dev.off()
 
+png("new-rev-control-singles.png", width=1000*sf, height=800*sf, res=72*sf)
+ggarrange(plotHypercube.curated.tree(my.ct[[1]]),
+          plotHypercube.bubbles(parallelised.runs[1]) +
+            theme(legend.position="none"),
+          plotHypercube.curated.tree(my.ct[[2]]),
+          plotHypercube.bubbles(parallelised.runs[3]) +
+            theme(legend.position="none"),
+          plotHypercube.curated.tree(my.ct[[3]]),
+          plotHypercube.bubbles(parallelised.runs[5]) +
+            theme(legend.position="none"),
+          plotHypercube.curated.tree(my.ct[[4]]),
+          plotHypercube.bubbles(parallelised.runs[7]) +
+            theme(legend.position="none"),
+          plotHypercube.curated.tree(my.ct[[5]]),
+          plotHypercube.bubbles(parallelised.runs[9]) +
+            theme(legend.position="none"),
+          plotHypercube.curated.tree(my.ct[[6]]),
+          plotHypercube.bubbles(parallelised.runs[11]) +
+            theme(legend.position="none"), ncol=4, nrow=3,
+          labels=c("i","","ii","","iii","","iv","","v","","vi",""))
+dev.off()
