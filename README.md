@@ -2,6 +2,8 @@
 
 Global comparative study of the evolution of AMR characters in *Klebsiella pneumoniae*. See preprint here! https://www.biorxiv.org/content/10.1101/2025.09.20.677523v2
 
+[![DOI](https://zenodo.org/badge/872354129.svg)](https://doi.org/10.5281/zenodo.20395420)
+
 <img width="1819" height="1246" alt="image" src="https://github.com/user-attachments/assets/3e94e843-342f-4596-b0d2-d158ef858156" />
 
 This repo has three components. The first uses existing (Kleborate) data with HyperTraPS to infer the evolutionary pathways by which Kp acquires different AMR characters across different countries. The second processes newly-sequenced Kp genome data and performs evolutionary analysis on this new data set. The third (much smaller) carries out a synthetic control study examining the performance of HyperTraPS when the "source" data are generated from a reversible evolutionary process (HyperTraPS assumes irreversible changes). 
