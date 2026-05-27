@@ -2,6 +2,7 @@ library(ape)
 library(phangorn)
 library(parallel)
 library(hypertrapsct)
+library(ggpubr)
 
 # how much of a problem is reversibility?
 x.list = my.ct = plot.ct = list()
@@ -163,22 +164,22 @@ dev.off()
 
 png("new-rev-control-singles.png", width=1000*sf, height=800*sf, res=72*sf)
 ggarrange(plotHypercube.curated.tree(my.ct[[1]]),
-          plotHypercube.bubbles(parallelised.runs[1]) +
+          plotHypercube.bubbles(parallelised.runs[[1]]) +
             theme(legend.position="none"),
           plotHypercube.curated.tree(my.ct[[2]]),
-          plotHypercube.bubbles(parallelised.runs[3]) +
+          plotHypercube.bubbles(parallelised.runs[[3]]) +
             theme(legend.position="none"),
           plotHypercube.curated.tree(my.ct[[3]]),
-          plotHypercube.bubbles(parallelised.runs[5]) +
+          plotHypercube.bubbles(parallelised.runs[[5]]) +
             theme(legend.position="none"),
           plotHypercube.curated.tree(my.ct[[4]]),
-          plotHypercube.bubbles(parallelised.runs[7]) +
+          plotHypercube.bubbles(parallelised.runs[[7]]) +
             theme(legend.position="none"),
           plotHypercube.curated.tree(my.ct[[5]]),
-          plotHypercube.bubbles(parallelised.runs[9]) +
+          plotHypercube.bubbles(parallelised.runs[[9]]) +
             theme(legend.position="none"),
           plotHypercube.curated.tree(my.ct[[6]]),
-          plotHypercube.bubbles(parallelised.runs[11]) +
+          plotHypercube.bubbles(parallelised.runs[[11]]) +
             theme(legend.position="none"), ncol=4, nrow=3,
           labels=c("i","","ii","","iii","","iv","","v","","vi",""))
 dev.off()
