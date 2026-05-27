@@ -97,14 +97,15 @@ The connections to manuscript figures are:
 
 | Figure | Code producing figure | Raw data / preprocessed "save points" |
 |------|-------|------|
-| Fig 1 | Tasks 7-8 igj-followup.R | samples-by-country.Rdata, upset-details.Rdata, Romania.nwk, igj-all-bubbles.csv, kleborate-dichotomized.csv, all_models.Rdata | Fig 2 | Tasks 2,3,7 igj-followup.R | igj-all-bubbles.csv, pca-data-frame.Rdata |
+| Fig 1 | Tasks 7-8 igj-followup.R | samples-by-country.Rdata, upset-details.Rdata, Romania.nwk, igj-all-bubbles.csv, kleborate-dichotomized.csv, all_models.Rdata |
+| Fig 2 | Tasks 2,3,7 igj-followup.R | igj-all-bubbles.csv, pca-data-frame.Rdata |
 | Fig 3 | Task 4 igj-followup.R | pca-values-country.Rdata |
 | Fig 4 | Tasks 5-6 igj-followup.R | drug-covariate.Rdata, samples-by-country.Rdata |
+| Fig 5 | Tasks 3,5,6 process-ANI-all.R | tree-all.phy, onestep-predictions.Rdata, genome-feature-summary.Rdata |
 | Supp Fig 1 | (A-B) reversibility.R, C Task 11 igj-followup.R | new-rev-control.Rdata, fit-rev-irrev-5.Rdata |
 | Supp Fig 2 | Task 9 igj-followup.R | igj-all-bubbles.csv |
 | Supp Fig 3 | Task 10 igj-followup.R | prevalence-cor.Rdata |
 | Supp Fig 5 | Task 4 igj-followup.R | pca-values-country.Rdata |
-| Fig 5 | Tasks 3,5,6 process-ANI-all.R | tree-all.phy, onestep-predictions.Rdata, genome-feature-summary.Rdata |
 | Supp Fig 6 | Tasks 3,5 process-ANI-all.R | tree-all.phy	|
 
 
