@@ -16,7 +16,7 @@ if (!exists("country.list")) {
   country.list <- get(name)
 }
 # scaling factor for graphics
-sf = 2
+sf = 5
 
 # broad contents
 # TASK 1 -- preprocessing and curating
@@ -138,6 +138,8 @@ for(i in 1:nrow(pca.df)) {
 pca.cols = viridis(7, option = "magma")
 pca.cols[7] = "#FF0000"
 pca.cols[1] = "#888888"
+
+save(pca.df, file="pca-data-frame.Rdata")
 
 # PCA1 vs PCA2 plot, plus ellipses 
 g.pca1.alt =  ggplot(pca.df, aes(x=pca1, y=pca2, color=region, label=country, fill=region)) + 
@@ -309,6 +311,8 @@ png("pca-corrs3-alt.png", width=600*sf, height=400*sf, res=72*sf)
 pca.corrs3.alt
 dev.off()
 
+save(plot.long.df, file="pca-values-country.Rdata")
+
 ############### TASK 5 -- geographical regions and PCA stats
 
 g.region.2 = ggplot(long.df[long.df$Variable == 1,], aes(x=region, y=pca2, fill=region, label=ccode)) +
@@ -401,6 +405,8 @@ g.covariates = ggarrange(
   g.region.indz + labs(y="Expected\nacquisition ordering"), 
   g.drugs + scale_color_viridis_d(option="magma") + theme(legend.position="none"), nrow=3, heights=c(0.7,0.7,1), labels=c("", "C", "D"))
 
+save(plot.dc, file="drug-covariate.Rdata")
+
 # pull geographical and drug covariate plots together
 png("covariates.png", width=500*sf, height=600*sf, res=72*sf)
 g.covariates
@@ -451,6 +457,9 @@ for(country in cnames) {
 c.df$country = gsub("_", " ", c.df$country)
 c.df$country[c.df$country=="United Kingdom"] <- "UK"
 
+save(c.df, file="samples-by-country.Rdata")
+save(to.upset.plot, file="upset-details.Rdata")
+
 # get map data
 world <- map_data("world")
 
@@ -489,7 +498,6 @@ global.plot.alt = ggplot(data=rdf[rdf$Probability > 1/22,], aes(x=Time+1, y=feat
 # highlight bimodal features
 global.plot.alt.hl = highlight_layer(global.plot.alt, c(2, 12, 18))
 
-sf = 2
 png("global-plot-alt.png", width=250*sf, height=250*sf, res=72*sf)
 print(global.plot.alt.hl+xlab("Evolutionary ordering"))
 dev.off()
@@ -586,7 +594,6 @@ all.plot = ggplot(df[!(df$country %in% setdiff(df$country, c.ordered)),],
   labs(x="Evolutionary ordering", y="Country") + guides(color = "none") + theme_minimal()
 
 # output
-sf = 3
 png("all-plot.png", width=1700*sf, height=900*sf, res=72*sf)
 print(all.plot)
 dev.off()
@@ -623,6 +630,8 @@ ggarrange(cor.plot, cor.plot + facet_wrap(~char),
           labels = c("A", "B"), widths=c(1,2))
 dev.off()
 
+save(cor.plot, file="prevalence-cor.Rdata")
+
 
 ############### TASK 11 -- compare irreversible and reversible fits for a subset of features and data
 
@@ -635,7 +644,7 @@ dev.off()
 
 set.seed(1)
 
-run.inference = TRUE
+run.inference = FALSE
 
 # get a random subset and look at its properties
 all.small = all.df[sample(1:nrow(all.df), 20), sub.cols]
@@ -685,7 +694,7 @@ all.plots = ggarrange(
   plot_hyperinf_comparative(list(fit.rev, fit.ht), bend = 1, style="full", expt.names = c("Rev", "Irrev")), nrow=1, widths=c(1,2.5,4), labels=c("i", "ii", "iii")
 )
 
-sf = 3
 png("rev-irrev-compare.png", width=600*sf, height=200*sf, res=72*sf)
 print(all.plots)
 dev.off()
+
