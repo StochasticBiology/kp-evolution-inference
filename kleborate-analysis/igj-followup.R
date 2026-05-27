@@ -3,6 +3,8 @@ library(ggbeeswarm)
 library(ggrepel)
 library(ggpubr)
 library(ggupset)
+library(igraph)
+library(ggraph)
 library(countrycode)
 library(hypertrapsct)
 library(tidyr)
@@ -22,14 +24,15 @@ sf = 5
 # TASK 1 -- preprocessing and curating
 # TASK 2 -- PCA plots of summarised "bubble plot" dynamics (Fig 2B)
 # TASK 3 -- bubble plots corresponding to PCA extremes (Fig 2C)
-# TASK 4 -- individual features and PCA behaviour (Fig 3)
+# TASK 4 -- individual features and PCA behaviour (Fig 3, Supp Fig 5)
 # TASK 5 -- geographical regions and PCA stats (Fig 4A-C)
 # TASK 6 -- drug use data and acquisition (Fig 4D)
 # TASK 7 -- summary global data (Fig 1A-B, Fig 2A)
 # TASK 8 -- case study plot (Fig 1C)
 # TASK 9 -- mega bubble plot (Supp Fig 2)
-# TASK 10 -- link between inferred ordering and prevalence (Supp Fig)
-# TASK 11 -- compare irreversible and reversible fits for a subset of features and data (Supp Fig)
+# TASK 10 -- link between inferred ordering and prevalence (Supp Fig 3)
+# TASK 11 -- compare irreversible and reversible fits for a subset of features and data (Supp Fig 1C)
+# TASK 12 -- plot estimated interaction graph (Supp Fig 4)
 
 ############### TASK 1 -- preprocessing and curating
 
@@ -698,3 +701,68 @@ png("rev-irrev-compare.png", width=600*sf, height=200*sf, res=72*sf)
 print(all.plots)
 dev.off()
 
+############### TASK 12 -- plot estimated interaction graph
+
+plot.df = data.frame()
+for(this.country in names(country.list)) {
+  for(seed in 1:3) {
+    my.post = country.list[[this.country]][[seed]]
+    if(!is.null(my.post)) {
+      labels = my.post$featurenames
+      
+      for (i in 1:my.post$L) {
+        for (j in 1:my.post$L) {
+          ref = (i - 1) * my.post$L + (j - 1) + 1
+          
+          ref.mean = mean(my.post$posterior.samples[, 
+                                                    ref])
+          ref.sd = sd(my.post$posterior.samples[, ref])
+          cv = abs(ref.sd/ref.mean)
+          if(is.na(cv)) { cv = Inf }
+          if (i != j & cv < 2) {
+            plot.df = rbind(plot.df, data.frame(country=paste0(this.country, seed, collapse=""),
+                                                x = labels[i], 
+                                                y = labels[j], mean = ref.mean, cv = abs(ref.sd/ref.mean)))
+          }
+        }
+      }
+    }
+  }
+}
+
+pdf = plot.df[plot.df$cv < 1,]
+pdf$x = gsub("cquired", "", pdf$x)
+pdf$y = gsub("cquired", "", pdf$y)
+pdf$x = gsub("utations", "", pdf$x)
+pdf$y = gsub("utations", "", pdf$y)
+result <- pdf %>%
+  group_by(x, y) %>%
+  summarise(
+    n_countries = floor(n_distinct(country)/3),
+    prop_countries = n_distinct(country) / n_distinct(pdf$country),
+    mean_of_mean = mean(mean, na.rm = TRUE),
+    .groups = "drop"
+  )
+result$Direction = 1
+result$Direction[result$mean_of_mean < 0] = -1
+result$Direction = factor(result$Direction)
+result$Weight = abs(result$mean_of_mean)
+
+save(result, file="interaction-graph.Rdata")
+
+g = igraph::graph_from_data_frame(result[result$prop_countries > 0.15,])
+
+plot.interactions = ggraph::ggraph(g, layout = "kk") + 
+  ggraph::geom_edge_arc(ggplot2::aes(colour = Direction, 
+                                     alpha = Weight, width = Weight,
+                                     label = n_countries), label_size=3, 
+                        strength = 0.1, arrow = grid::arrow(length = grid::unit(0.2, 
+                                                                                "inches"), type = "closed")) + 
+  ggraph::geom_node_text(ggplot2::aes(label = name), size=4) +
+  scale_edge_colour_manual(values = c("#FF8888", "#AAAAFF")) +
+  theme_void() +
+  labs(alpha = "Magnitude", width = "Magnitude", colour = "Direction")
+
+png("interactions.png", width=600*sf, height=600*sf, res=72*sf)
+print(plot.interactions)
+dev.off()
