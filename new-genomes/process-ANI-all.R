@@ -10,19 +10,19 @@ library(ggpubr)
 library(dplyr)
 
 # should we run HyperTraPS for the new genome data? TRUE if so; FALSE if we've already done so (to save time)
-run.inference = TRUE
+run.inference = FALSE
 regularise.output = FALSE
 
 # graphics styling options
 options(ignore.negative.edge=TRUE)
-sf = 2
+sf = 5
 
 # broad contents
 # TASK 1 -- read data
 # TASK 2 -- diagnostics of structure in genetic space
-# TASK 3 -- create tree from ANI values (Fig. S5A)
+# TASK 3 -- create tree from ANI values (Fig. S6A)
 # TASK 4 -- consider AMR features in the old and new datasets
-# TASK 5 -- consider Zanzibar observations (Fig. 5, S5B)
+# TASK 5 -- consider Zanzibar observations (Fig. 5, S6B)
 # TASK 6 -- test predictions on new data (Fig. 5B)
 
 ############ TASK 1 -- read data
@@ -291,6 +291,9 @@ df_summary.z <- bind_rows(
   get_proportions(zanzibar.df, "Zanzibar")
 )
 
+
+save(df_summary.z, file="genome-feature-summary.Rdata")
+
 comp.plot.z = ggplot(df_summary.z[!(df_summary.z$column %in% c("id","strain")),], aes(x=column, y=proportion, fill=dataset)) + 
   geom_col(position="dodge", width=0.7) +  theme_minimal() + 
   theme(axis.text.x = element_text(angle=45, hjust=1)) +
@@ -465,10 +468,28 @@ predict.plot = ggplot(preds.ranks[preds.ranks$model != "null",], aes(x=ranks, co
   theme_minimal() + facet_wrap(~ n.change)
 predict.plot
 
+change.df = data.frame()
+for(this.change in unique(preds.ranks$n.change)) {
+  
+tmp = preds.ranks[preds.ranks$n.change == this.change & preds.ranks$label == "HyperTraPS",]
+tmp2 = preds.ranks[preds.ranks$n.change == this.change & preds.ranks$label == "Prevalence",]
+tmp$pranks = tmp2$ranks
+change.df = rbind(change.df, data.frame(change=this.change, 
+                                        total = nrow(tmp),
+                                        h.wins = length(which(tmp$ranks<tmp$pranks)),
+                                        p.wins = length(which(tmp$ranks>tmp$pranks))))
+}
+change.df
+ggplot(tmp, aes(x=ranks,y=pranks)) + geom_jitter() + geom_abline()
+
 preds.ranks$label = ""
 preds.ranks$label[preds.ranks$model=="trained"] = "HyperTraPS"
 preds.ranks$label[preds.ranks$model=="untrained"] = "Prevalence"
-predict.plot = ggplot(preds.ranks[preds.ranks$n.change == 1 & preds.ranks$model != "null",], 
+plot.1.preds = preds.ranks[preds.ranks$n.change == 1 & preds.ranks$model != "null",]
+
+save(plot.1.preds, file="onestep-predictions.Rdata")
+
+predict.plot = ggplot(plot.1.preds, 
                       aes(x=ranks, color=label, fill=label)) + 
   geom_histogram(
     aes(y = after_stat(density)),
@@ -481,9 +502,7 @@ predict.plot = ggplot(preds.ranks[preds.ranks$n.change == 1 & preds.ranks$model 
   scale_x_continuous(breaks = function(x) seq(floor(min(x)), ceiling(max(x)), by = 1)) +
   theme_minimal() 
 predict.plot
-png("~/Dropbox/Talks/HyperEvol/talk-predictions.png", width=250*sf, height=200*sf, res=72*sf)
-print(predict.plot)
-dev.off()
+
 png("one-step-predictions.png", width=250*sf, height=200*sf, res=72*sf)
 print(predict.plot)
 dev.off()
@@ -503,7 +522,6 @@ if(FALSE) {
 }
 
 # various stylings of summary plots
-sf = 3
 png("predictions-138-new.png", width=500*sf, height=600*sf, res=72*sf)
 ggarrange(ggarrange(all.data.plot, predict.plot, widths=c(1.,1), nrow=1, labels=c("A", "B")),
           comp.plot.z, labels=c("", "C"), nrow=2, heights=c(1.5,1))
