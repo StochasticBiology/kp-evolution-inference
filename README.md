@@ -85,6 +85,7 @@ In the Zotero repository (not on Github, due to filesize limitations), the follo
 | drug-covariate.Rdata	| PCA statistics with drug use as a covariate |
 | prevalence-cor.Rdata | Prevalence/ordering correlation |
 | fit-rev-irrev-5.Rdata | Irreversible vs reversible model fits for data subset |
+| interaction-graph.Rdata | Inferred interactions between characters |
 |--------|---------|
 | tree-all.phy | Tree linking old and new Tanzanian Kp genomes |
 | genome-feature-summary.Rdata | KpAMR features in old and new Tanzanian genomes |
@@ -105,6 +106,7 @@ The connections to manuscript figures are:
 | Supp Fig 1 | (A-B) reversibility.R, C Task 11 igj-followup.R | new-rev-control.Rdata, fit-rev-irrev-5.Rdata |
 | Supp Fig 2 | Task 9 igj-followup.R | igj-all-bubbles.csv |
 | Supp Fig 3 | Task 10 igj-followup.R | prevalence-cor.Rdata |
+| Supp Fig 4 | Task 12 igj-followup.R | interaction-graph.Rdata |
 | Supp Fig 5 | Task 4 igj-followup.R | pca-values-country.Rdata |
 | Supp Fig 6 | Tasks 3,5 process-ANI-all.R | tree-all.phy	|
 
